@@ -574,6 +574,7 @@ form.local_business.stripe_account.help: Verbinden Sie ein Stripe Konto um Geld 
   einem anderen Bankkonto zu überweisen
 form.local_business.stripe_account.connect_button.text: Mit Stripe verbinden
 form.local_business.stripe_account.success: Stripe Konto erfolgreich verbunden
+form.local_business.mercadopago_account.title: MercadoPago Konto
 form.menu_taxon.child_name.placeholder: "Zum Beispiel: Haupgerichte, Desserts, ...\n"
 form.menu_editor.save.label: Änderungen speichern
 form.menu_editor.taxon_modal.title: Ändern Sie einen Abschnitt
@@ -698,6 +699,7 @@ form.registration.legal.help: Indem Sie dieses Kästchen ankreuzen, erklären Si
   mit unseren <a href="%terms_url%">AGB</a> und <a href="%privacy_url%">Datenschutzerklärung</a>
   einverstanden.
 form.local_business.iso_code.fr.vat_number: USt.-Id Nr.
+form.local_business.iso_code.ar.cuit: CUIT/CUIL Nr.
 form.min_max.lower.label: Anzahl Min.
 orders.payment_refunded: Zahlung erfolgreich zurückerstattet
 orders.payment_link.sent: Email erfolgreich gesendet

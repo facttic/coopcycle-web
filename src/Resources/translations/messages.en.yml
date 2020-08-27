@@ -602,6 +602,7 @@ form.local_business.stripe_account.link_ok: "This restaurant is linked to a Stri
   \ account and the transfers to your account, please use the <a href=\"https://dashboard.stripe.com/\"\
   \ target=\"_blank\">Stripe dashboard</a>.\n"
 form.local_business.mercadopago.connect_button.text: Connect with Mercado Pago
+form.local_business.mercadopago_account.title: MercadoPago Account
 form.menu_item.name.label: Name
 form.menu_item.price.label: Price
 form.menu_item_modifier.name.label: Name
@@ -896,6 +897,7 @@ form.min_max.infinity.label: No maximum
 form.local_business.iso_code.fr.siret: SIRET number
 form.local_business.iso_code.fr.vat_number: VAT number
 form.local_business.iso_code.fr.rcs_number: RCS number
+form.local_business.iso_code.ar.cuit: CUIT/CUIL number
 receipt.title: 'Receipt of your order #%number%'
 receipt.line_item.name: Product
 receipt.line_item.unit_price: Unit price
