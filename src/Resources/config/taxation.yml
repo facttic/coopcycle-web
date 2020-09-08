@@ -84,6 +84,8 @@ jewelry:
 
 base_standard:
   rates:
+    ar:
+      standard: 0.21
     be:
       standard: 0.21
     ca-bc:
@@ -115,6 +117,8 @@ base_intermediary:
 
 base_reduced:
   rates:
+    ar:
+      reduced: 0.105
     be:
       reduced: 0.06
     ca-bc:
