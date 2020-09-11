@@ -31,3 +31,9 @@ migrations-migrate:
 
 email-preview:
 	@docker-compose exec php php bin/console coopcycle:email:preview > /tmp/coopcycle_email_layout.html && open /tmp/coopcycle_email_layout.html
+
+dev:
+	@docker-compose -f docker-compose.dev.yml up
+
+devd:
+	@docker-compose -f docker-compose.dev.yml up -d
