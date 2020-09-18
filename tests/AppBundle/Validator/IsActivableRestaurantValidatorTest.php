@@ -9,23 +9,26 @@ use AppBundle\Validator\Constraints\IsActivableRestaurant;
 use AppBundle\Validator\Constraints\IsActivableRestaurantValidator;
 use Prophecy\PhpUnit\ProphecyTrait;
 use Symfony\Component\Validator\Test\ConstraintValidatorTestCase;
+use AppBundle\Payment\GatewayResolver;
 
 class IsActivableRestaurantValidatorTest extends ConstraintValidatorTestCase
 {
     use ProphecyTrait;
 
 	private $settingsManager;
+	private $resolver;
 
 	public function setUp() :void
     {
         $this->settingsManager = $this->prophesize(SettingsManager::class);
+        $this->resolver = $this->prophesize(GatewayResolver::class);
 
         parent::setUp();
     }
 
     protected function createValidator()
     {
-        return new IsActivableRestaurantValidator($this->settingsManager->reveal());
+        return new IsActivableRestaurantValidator($this->settingsManager->reveal(), $this->resolver->reveal());
 	}
 
     public function testMissingPhone()
