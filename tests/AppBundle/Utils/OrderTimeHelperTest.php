@@ -62,6 +62,8 @@ class OrderTimeHelperTest extends TestCase
 
     public function testAsapWithSameDayShippingChoices()
     {
+        ini_set('date.timezone', 'Europe/Paris');
+        // date_default_timezone_set('Europe/Paris');
         Carbon::setTestNow(Carbon::parse('2020-03-31T14:25:00+02:00'));
 
         $restaurant = $this->prophesize(Restaurant::class);
