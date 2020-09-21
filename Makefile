@@ -17,7 +17,7 @@ phpunit:
 	@docker-compose exec php php vendor/bin/phpunit
 
 behat:
-	@docker-compose exec php php vendor/bin/behat
+	@docker-compose exec php php -d date.timezone=Europe/Paris vendor/bin/behat
 
 mocha:
 	@docker-compose exec -e SYMFONY_ENV=test -e NODE_ENV=test nodejs /run-tests.sh
