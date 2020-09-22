@@ -6,9 +6,20 @@ import { ContextMenuTrigger } from 'react-contextmenu'
 
 import { setCurrentTask, toggleTask, selectTask } from '../redux/actions'
 import { selectTasksWithColor, selectIsVisibleTask } from '../redux/selectors'
+import { addressAsText } from '../utils'
 import TaskEta from './TaskEta'
 
 moment.locale($('html').attr('lang'))
+
+const TaskCaption = ({ task, t }) => (
+  <span>
+    <span className="mr-1">#{ task.id }</span>
+    { t('ADMIN_DASHBOARD_TASK_CAPTION', {
+      address: addressAsText(task.address),
+      date: moment(task.before).format('LT')
+    }) }
+  </span>
+)
 
 class Task extends React.Component {
 
@@ -139,9 +150,6 @@ class Task extends React.Component {
       classNames.push('task__highlighted')
     }
 
-    const customerName =  task.address.firstName ?  [task.address.firstName, task.address.lastName, task.address.streetAddress].join(' ') : null,
-      addressName = task.address.name || customerName || task.address.streetAddress
-
     const contextMenuTriggerAttrs = {
       ...taskAttributes,
       style: {
@@ -165,13 +173,7 @@ class Task extends React.Component {
         collect={ collect }
         attributes={ contextMenuTriggerAttrs }>
         <i className={ 'task__icon task__icon--type fa fa-' + (task.type === 'PICKUP' ? 'cube' : 'arrow-down') }></i>
-        <span>
-          { this.props.t('ADMIN_DASHBOARD_TASK_CAPTION', {
-            id: task.id,
-            address: addressName,
-            date: moment(task.doneBefore).format('LT')
-          }) }
-        </span>
+        <TaskCaption task={ task } t={ this.props.t } />
         { this.renderAttrs() }
         { this.renderTags() }
         { this.renderIconRight() }
