@@ -16,6 +16,7 @@ use AppBundle\Action\Order\Delay as OrderDelay;
 use AppBundle\Action\Order\Fulfill as OrderFulfill;
 use AppBundle\Action\Order\Pay as OrderPay;
 use AppBundle\Action\Order\Refuse as OrderRefuse;
+use AppBundle\Action\Order\MercadopagoPreference as OrderMercadopagoPreference;
 use AppBundle\Action\MyOrders;
 use AppBundle\Api\Dto\CartItemInput;
 use AppBundle\DataType\TsRange;
@@ -84,6 +85,15 @@ use Sylius\Component\Taxation\Model\TaxRateInterface;
  *     "get"={
  *       "method"="GET",
  *       "access_control"="is_granted('ROLE_ADMIN') or (is_granted('ROLE_RESTAURANT') and user.ownsRestaurant(object.getRestaurant())) or object.getCustomer() == user"
+ *     },
+ *   "mercadopago_preference"={
+ *       "method"="GET",
+ *       "path"="/orders/{id}/mercadopago-preference",
+ *       "controller"=OrderMercadopagoPreference::class,
+ *       "access_control"="object.getCustomer() == user",
+ *       "swagger_context"={
+ *         "summary"="Gets an Order Mercadopago Preference."
+ *       }
  *     },
  *     "pay"={
  *       "method"="PUT",
