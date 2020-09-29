@@ -8,6 +8,7 @@ use AppBundle\Entity\ClosingRule;
 use AppBundle\Entity\Contract;
 use AppBundle\Entity\Cuisine;
 use AppBundle\Entity\LocalBusiness;
+use AppBundle\Entity\RestaurantMercadopagoAccount;
 use AppBundle\Entity\Restaurant\PreparationTimeRule;
 use AppBundle\Entity\ReusablePackaging;
 use AppBundle\Entity\StripeAccount;
@@ -1288,5 +1289,25 @@ trait RestaurantTrait
         // TODO Implement
 
         throw $this->createNotFoundException();
+    }
+
+    public function mercadoPagoUnlinkAction($id, Request $request)
+    {
+        $restaurantMercadopagoAccounts = $this->getDoctrine()
+            ->getRepository(RestaurantMercadopagoAccount::class)
+            ->findOneByRestaurant($id);
+
+        $mercadopagoAccount = $restaurantMercadopagoAccounts->getMercadopagoAccount();
+
+        $em = $this->getDoctrine()->getManager();
+
+        $em->remove($restaurantMercadopagoAccounts);
+        $em->remove($mercadopagoAccount);
+        $em->flush();
+
+        // redirect to restaurant page
+        $routes = $this->getRestaurantRoutes();
+
+        return $this->redirectToRoute($routes['restaurant'], ['id' => $id]);
     }
 }
