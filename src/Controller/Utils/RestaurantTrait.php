@@ -1291,22 +1291,71 @@ trait RestaurantTrait
         throw $this->createNotFoundException();
     }
 
-    public function mercadoPagoUnlinkAction($id, Request $request)
+    /**
+     * Revoke user authorization
+     * See https://developers.mercadolibre.com.ar/es_ar/gestiona-tus-aplicaciones 
+     */
+    public function mercadoPagoUnlinkAction($id, Request $request, MercadopagoManager $mercadopagoManager, SettingsManager $settingsManager)
     {
+        $routes = $this->getRestaurantRoutes();
+
         $restaurantMercadopagoAccounts = $this->getDoctrine()
             ->getRepository(RestaurantMercadopagoAccount::class)
             ->findOneByRestaurant($id);
 
         $mercadopagoAccount = $restaurantMercadopagoAccounts->getMercadopagoAccount();
 
-        $em = $this->getDoctrine()->getManager();
+        $mercadopagoManager->configure();
 
-        $em->remove($restaurantMercadopagoAccounts);
-        $em->remove($mercadopagoAccount);
-        $em->flush();
+        // request to Mercadopago
+        // curl -X DELETE https://api.mercadolibre.com/users/$USER_ID/applications/$APP_ID?access_token=$ACCESS_TOKEN
+        $USER_ID        = $mercadopagoAccount->getUserId();
+        $ACCESS_TOKEN   = $mercadopagoAccount->getAccessToken();
+        $APP_ID         = $settingsManager->get('mercadopago_app_id');
+        $url = "https://api.mercadolibre.com/users/{$USER_ID}/applications/{$APP_ID}?access_token={$ACCESS_TOKEN}";
+        
+        // curl delete
+        $ch = curl_init();
 
-        // redirect to restaurant page
-        $routes = $this->getRestaurantRoutes();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+        
+        $curl_result = json_decode(curl_exec($ch), true);
+        $curl_httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        
+        curl_close($ch); // do not forget
+
+        if ($curl_httpCode !== 200 ) { // error
+            
+            $this->addFlash(
+                'error',
+                $curl_result['message'] ." ".  $curl_result['error']
+            );
+        
+        } elseif ($curl_httpCode === 200) {
+            
+            $restaurant = $restaurantMercadopagoAccounts->getRestaurant();
+            $restaurant->setEnabled(false);
+            
+            // remove from DB
+            $em = $this->getDoctrine()->getManager();
+            
+            $em->remove($restaurantMercadopagoAccounts);
+            $em->remove($mercadopagoAccount);
+            $em->flush();
+            
+            $this->addFlash(
+                'notice',
+                'Cuenta de Mercadopago desvinculada con exito.' // FIXME translate this
+            );
+
+        } else {
+            $this->addFlash(
+                'warning',
+                'Algo pasó, no se pudo desvincular la cuenta de Mercadopago.' // FIXME translate this
+            );
+        }
 
         return $this->redirectToRoute($routes['restaurant'], ['id' => $id]);
     }
