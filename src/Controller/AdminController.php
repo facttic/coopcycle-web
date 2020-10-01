@@ -383,7 +383,9 @@ class AdminController extends Controller
         TokenGeneratorInterface $tokenGenerator,
         EntityManagerInterface $objectManager)
     {
-        $form = $this->createForm(InviteUserType::class);
+        $user = $userManager->createUser();
+
+        $form = $this->createForm(InviteUserType::class, $user);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -469,8 +471,6 @@ class AdminController extends Controller
 
         if ($editForm->isSubmitted() && $editForm->isValid()) {
 
-            $userManager = $this->getDoctrine()->getManagerForClass(User::class);
-
             $user = $editForm->getData();
 
             $roles = $editForm->get('roles')->getData();
@@ -487,8 +487,7 @@ class AdminController extends Controller
                 }
             }
 
-            $userManager->persist($user);
-            $userManager->flush();
+            $userManager->updateUser($user);
 
             $this->addFlash(
                 'notice',
@@ -1111,8 +1110,12 @@ class AdminController extends Controller
     public function embedAction(Request $request, SettingsManager $settingsManager)
     {
         $pricingRuleSet = null;
+        $timeSlot = null;
+        $packageSet = null;
 
         $pricingRuleSetId = $settingsManager->get('embed.delivery.pricingRuleSet');
+        $timeSlotId = $settingsManager->get('embed.delivery.timeSlot');
+        $packageSetId = $settingsManager->get('embed.delivery.packageSet');
         $withVehicle = $settingsManager->getBoolean('embed.delivery.withVehicle');
         $withWeight = $settingsManager->getBoolean('embed.delivery.withWeight');
 
@@ -1122,8 +1125,23 @@ class AdminController extends Controller
                 ->find($pricingRuleSetId);
         }
 
+        if ($timeSlotId) {
+            $timeSlot = $this->getDoctrine()
+                ->getRepository(TimeSlot::class)
+                ->find($timeSlotId);
+        }
+
+        if ($packageSetId) {
+            $packageSet = $this->getDoctrine()
+                ->getRepository(PackageSet::class)
+                ->find($packageSetId);
+        }
+
         $form = $this->createForm(EmbedSettingsType::class);
+
         $form->get('pricingRuleSet')->setData($pricingRuleSet);
+        $form->get('timeSlot')->setData($timeSlot);
+        $form->get('packageSet')->setData($packageSet);
         $form->get('withVehicle')->setData($withVehicle);
         $form->get('withWeight')->setData($withWeight);
 
@@ -1131,10 +1149,14 @@ class AdminController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
 
             $pricingRuleSet = $form->get('pricingRuleSet')->getData();
+            $timeSlot = $form->get('timeSlot')->getData();
+            $packageSet = $form->get('packageSet')->getData();
             $withVehicle = $form->get('withVehicle')->getData();
             $withWeight = $form->get('withWeight')->getData();
 
             $settingsManager->set('embed.delivery.pricingRuleSet', $pricingRuleSet ? $pricingRuleSet->getId() : null, 'embed');
+            $settingsManager->set('embed.delivery.timeSlot', $timeSlot ? $timeSlot->getId() : null, 'embed');
+            $settingsManager->set('embed.delivery.packageSet', $packageSet ? $packageSet->getId() : null, 'embed');
             $settingsManager->set('embed.delivery.withVehicle', $withVehicle ? 'yes' : 'no', 'embed');
             $settingsManager->set('embed.delivery.withWeight', $withWeight ? 'yes' : 'no', 'embed');
             $settingsManager->flush();

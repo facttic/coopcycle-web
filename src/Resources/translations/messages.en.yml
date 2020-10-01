@@ -24,7 +24,6 @@ adminDashboard.dashboard.exportTasks: Export tasks
 adminDashboard.dashboard.deleteTaskGroup: Delete task group
 adminDashboard.dashboard.displayByGroups: Display by groups
 adminDashboard.dashboard.displayAll: Display all
-adminDashboard.dashboard.cancel: Cancel
 adminDashboard.deliveries.title: Deliveries
 adminDashboard.deliveries.type: Type
 adminDashboard.deliveries.dueDate: Due date
@@ -33,7 +32,6 @@ adminDashboard.deliveries.address: Address
 adminDashboard.deliveries.delivery: Delivery
 adminDashboard.deliveries.originAddress: Origin address
 adminDashboard.deliveries.deliveryAddress: Delivery address
-adminDashboard.deliveries.save: Save
 adminDashboard.embed.title: External Display
 adminDashboard.package_sets.title: Packages
 adminDashboard.customize.title: Customize
@@ -55,7 +53,6 @@ embed.delivery.billing_address: Billing address
 adminDashboard.menuCategories.menu: Menu
 adminDashboard.menuCategories.categories: Categories
 adminDashboard.menuCategories.addCategory: Add category
-adminDashboard.menuCategories.save: Save
 adminDashboard.stores.title: Stores
 adminDashboard.stores.createNew: Create a new store
 adminDashboard.stores.form.uploadImage: Upload an image
@@ -66,7 +63,6 @@ adminDashboard.restaurants.title: Restaurants
 adminDashboard.restaurants.createNew: Create a new restaurant
 adminDashboard.restaurants.exclusive: Exclusive
 adminDashboard.users.title: Users
-adminDashboard.users.edit: Edit
 adminDashboard.users.roles: Roles
 adminDashboard.users.editUser: Edit user
 adminDashboard.users.edit.addStore: Add a store
@@ -87,7 +83,6 @@ adminDashboard.pricing.noRuleFound: No pricing rule found. Pricing rules define 
   the delivery cost is calculated.
 adminDashboard.pricing.addRule: Add rule
 adminDashboard.tags.title: Tags
-adminDashboard.tags.save: Save
 adminDashboard.tags.createNew: Create new tag
 adminDashboard.tags.name: Name
 adminDashboard.tags.color: Color
@@ -97,9 +92,6 @@ adminDashboard.tags.confirm_delete: "Are you sure you want to delete this tag? \
 adminDashboard.taxation.title: Taxation
 adminDashboard.taxation.button: Add taxation
 adminDashboard.zones.title: Zones
-adminDashboard.zones.cancel: Cancel
-adminDashboard.zones.save: Save
-adminDashboard.zones.delete: Delete
 adminDashboard.zones.uploadGeoJSON: Upload a GeoJSON file
 adminDashboard.zones.send: Send
 adminDashboard.back.title: Back to website
@@ -168,7 +160,6 @@ restaurant.form.temporaryClosingRule: Click here to temporarily disable orders t
 restaurant.form.deposit_refund_enabled.label: Enable deposit-refund system
 restaurant.form.accessPlanning: Access planning
 restaurant.form.createRestaurant: Create restaurant
-restaurant.form.save: Save
 restaurant.form.exclusive.label: This restaurant is exclusive
 restaurant.form.quotes_allowed.label: 'This restaurant also accepts quotes (e.g.:
   catering)'
@@ -279,15 +270,12 @@ profile.myOrders: My orders
 profile.myAddresses: My addresses
 profile.myPersonalInfo: My personal information
 profile.payment: Payment
-profile.task.cancel: Cancel
 profile.task.noTasks: No tasks scheduled
 profile.task.dueDate: Due date
 profile.task.address: Address
 profile.task.complete: Complete
 profile.task.date: Date
-profile.edit.save: Save
 profile.addresses.newAddress: New address
-profile.addresses.save: Save
 profile.addresses.add: Add
 profile.editProfile: Edit profile
 profile.payment.title: Payment
@@ -352,7 +340,6 @@ order.adjustment_type.tip: Tip
 order_item.adjustment_type.reusable_packaging: '%quantity% × packaging(s)'
 order.list.total: Total
 order.list.shippedAt: Shipping time
-order.list.cancel: Cancel
 order.list.type: Type
 order.list.customer: Customer
 order.list.state: State
@@ -366,7 +353,6 @@ vehicle.bike: Bike
 vehicle.cargo_bike: Cargo bike
 task.form.create: Create task
 task.form.timeWindow: Time window
-task.form.cancel: Cancel
 task.form.showHistory: Show history
 task.form.modal.moreOptions: More options
 task.form.edit: Modify task %id%
@@ -413,7 +399,9 @@ form.store_type.pricing_rule_set.placeholder: Choose a pricing
 form.store_type.setAsDefault.label: Set as default address
 form.store_type.defaultAddress.label: Default Address
 form.store_type.time_slot.label: Time slot
+form.store_type.time_slot.placeholder: Choose a time slot
 form.store_type.package_set.label: Package set
+form.store_type.package_set.placeholder: Choose a package set
 form.store_type.weight_required.label: Require input of weight
 form.store_type.packages_required.label: Require input of packages
 form.delivery.vehicle.placeholder: Choose a vehicle type
@@ -442,7 +430,6 @@ form.delivery.view_order: View order
 form.order.accept.label: Accept
 form.order.accept.help: Once you have accepted the order, the customer will be notified
   by email.
-form.order.cancel.label: Cancel
 form.order.refuse.label: Refuse
 form.order.fulfill.label: Fulfill
 form.order.payment_complete.label: Complete
@@ -747,7 +734,6 @@ roles.ROLE_COURIER.help: "Courier: view waiting tasks, modify assigned tasks…\
 roles.ROLE_RESTAURANT.help: 'Restaurant owner: manage assigned restaurants, manage
   orders…'
 roles.ROLE_STORE.help: 'Store owner: manage assigned stores, manage deliveries…'
-stores.form.save: Save
 stores.manage: Manage
 stores.settings: Settings
 stores.createNewDelivery: Create new delivery

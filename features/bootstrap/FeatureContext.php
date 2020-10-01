@@ -34,6 +34,7 @@ use Coduo\PHPMatcher\PHPMatcher;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\DataFixtures\Purger\ORMPurger;
 use Doctrine\ORM\Tools\SchemaTool;
+use Faker\Generator as FakerGenerator;
 use FOS\UserBundle\Util\UserManipulator;
 use Behatch\HttpCall\HttpCallResultPool;
 use PHPUnit\Framework\Assert;
@@ -112,7 +113,8 @@ class FeatureContext implements Context, SnippetAcceptingContext, KernelAwareCon
         Redis $redis,
         IriConverterInterface $iriConverter,
         HttpMessageFactoryInterface $httpMessageFactory,
-        Redis $tile38)
+        Redis $tile38,
+        FakerGenerator $faker)
     {
         $this->tokens = [];
         $this->oAuthTokens = [];
@@ -130,6 +132,7 @@ class FeatureContext implements Context, SnippetAcceptingContext, KernelAwareCon
         $this->iriConverter = $iriConverter;
         $this->httpMessageFactory = $httpMessageFactory;
         $this->tile38 = $tile38;
+        $this->faker = $faker;
     }
 
     public function setKernel(KernelInterface $kernel)
@@ -1093,5 +1096,66 @@ class FeatureContext implements Context, SnippetAcceptingContext, KernelAwareCon
                 Assert::fail(sprintf('Task #%d does not belong to organization with name "%s"', $task->getId(), $orgName));
             }
         }
+    }
+
+    /**
+     * @Given the store with name :storeName has imported tasks:
+     */
+    public function theStoreWithNameHasImportedTasks($storeName, TableNode $table)
+    {
+        $store = $this->doctrine->getRepository(Store::class)->findOneByName($storeName);
+
+        $group = new Task\Group();
+        $group->setName(sprintf('Import %s', date('d/m H:i')));
+
+        foreach ($table->getColumnsHash() as $data) {
+
+            $latitude = $this->faker->latitude(48.85, 48.86);
+            $longitude = $this->faker->longitude(2.33, 2.34);
+
+            $address = new Address();
+            $address->setStreetAddress($data['address.streetAddress']);
+            $address->setGeo(new GeoCoordinates($latitude, $longitude));
+
+            $task = new Task();
+
+            $task->setType($data['type']);
+            $task->setAfter(new \DateTime($data['after']));
+            $task->setBefore(new \DateTime($data['before']));
+            $task->setAddress($address);
+            $task->setOrganization($store->getOrganization());
+
+            $group->addTask($task);
+        }
+
+        $this->doctrine->getManagerForClass(Task\Group::class)->persist($group);
+        $this->doctrine->getManagerForClass(Task\Group::class)->flush();
+    }
+
+    /**
+     * @Given a task with ref :ref exists and is attached to store with name :storeName
+     */
+    public function aTaskWithRefExistsAndIsAttachedToStoreWithName($ref, $storeName)
+    {
+        $store = $this->doctrine->getRepository(Store::class)->findOneByName($storeName);
+
+        $latitude = $this->faker->latitude(48.85, 48.86);
+        $longitude = $this->faker->longitude(2.33, 2.34);
+
+        $address = new Address();
+        $address->setStreetAddress('1, Rue de Rivoli, Paris, France');
+        $address->setGeo(new GeoCoordinates($latitude, $longitude));
+
+        $task = new Task();
+
+        $task->setType('dropoff');
+        $task->setAfter(new \DateTime('+1 hour'));
+        $task->setBefore(new \DateTime('+2 hours'));
+        $task->setAddress($address);
+        $task->setOrganization($store->getOrganization());
+        $task->setRef($ref);
+
+        $this->doctrine->getManagerForClass(Task::class)->persist($task);
+        $this->doctrine->getManagerForClass(Task::class)->flush();
     }
 }
