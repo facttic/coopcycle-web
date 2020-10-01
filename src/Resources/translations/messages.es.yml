@@ -414,7 +414,10 @@ form.local_business.stripe_account.link_ok: "Éste restaurante ha sido enlazado 
 form.settings.mercadopago.title: Mercado Pago
 form.local_business.mercadopago_account.title: Cuenta de MercadoPago
 form.local_business.mercadopago_account.success: Cuenta MercadoPago conectada con éxito
+form.local_business.mercadopago_account.unlink.success: Cuenta MercadoPago desvinculada con éxito
+form.local_business.mercadopago_account.unlink.error: Cuenta MercadoPago desvinculada con éxito
 form.local_business.mercadopago.connect_button.text: Conectar con MercadoPago
+form.local_business.mercadopago.disconnect_button.text: Desconectar de Mercadopago
 form.mercadopago_livemode.enable.label: Utilizar Mercadopago en modo « producción »
 form.mercadopago_livemode.enable.alert: En modo « producción », las tarjetas de crédito serán cargadas.
 form.mercadopago_livemode.disable.label: Utilizar Mercadopago en modo « test »

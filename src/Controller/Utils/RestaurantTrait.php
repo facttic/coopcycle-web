@@ -1347,13 +1347,13 @@ trait RestaurantTrait
             
             $this->addFlash(
                 'notice',
-                'Cuenta de Mercadopago desvinculada con exito.' // FIXME translate this
+                $this->get('translator')->trans('form.local_business.mercadopago_account.unlink.success')
             );
 
         } else {
             $this->addFlash(
                 'warning',
-                'Algo pasó, no se pudo desvincular la cuenta de Mercadopago.' // FIXME translate this
+                $this->get('translator')->trans('form.local_business.mercadopago_account.unlink.error')
             );
         }
 

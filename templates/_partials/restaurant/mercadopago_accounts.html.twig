@@ -17,7 +17,7 @@
         </span>
 
         <a href="{{ path(mercadopago_unlink_route, { id: restaurant.id, livemode: 'no'}) }}" class="btn btn-sm mercadopago-connect">
-          <span>Desvincular MP</span>
+          <span>{{ 'form.local_business.mercadopago.disconnect_button.text'|trans }}</span>
         </a>
         
       {% else %}
