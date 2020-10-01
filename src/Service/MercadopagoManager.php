@@ -74,7 +74,7 @@ class MercadopagoManager
         if ($applicationFee > 0) {
             $p->application_fee = ($applicationFee / 100);
         }
-      
+
         if (!$p->save($options)) {
             throw new \Exception((string) $p->error);
         }

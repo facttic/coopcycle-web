@@ -47,6 +47,8 @@ class MercadopagoPreference
             }
         }
 
+        $applicationFee = $applicationFee / 100;
+
         $customer = $data->getCustomer();
         $orderItems = $data->getItems();
 
@@ -62,16 +64,34 @@ class MercadopagoPreference
             // $item->description = $product->getDescriptor();
             $item->quantity = $i->getQuantity();
             $item->currency_id = $this->currencyContext->getCurrencyCode();
-            $item->unit_price = $i->getUnitPrice() / 100;
+            $item->unit_price = $i->getUnitPrice() / 100 ;
             $mpItems[] = $item;
         }
+
+        // Option 1 to include applicationFee to the total cost
+        $item = new MercadoPago\Item();
+        // FIXME: Do not harcode this
+        $item->id = "Shipping and tip"; // or it could be $i->getCode()
+        $item->title = "Shipping cost and tips";
+        // $item->description = $product->getDescriptor();
+        $item->quantity = 1;
+        $item->currency_id = $this->currencyContext->getCurrencyCode();
+        $item->unit_price = $applicationFee;
+        $mpItems[] = $item;
+
+        // Option 2 to include applicationFee to the total cost, but I don't know if this is correct
+        // $shipment = new Mercadopago\Shipments();
+        // $shipment->cost = 0.01;
+        // $shipment->mode = "custom";
+        // $preference->shipments = $shipment;
 
         $payer = new MercadoPago\Payer();
         $payer->email = $customer->getEmail();
 
         $preference->items = $mpItems;
         $preference->payer = $payer;
-        $preference->marketplace_fee = $applicationFee / 100;
+        $preference->marketplace_fee = $applicationFee;
+        // FIXME: Do we need this notification url?
         $preference->notification_url = "http://urlmarketplace.com/notification_ipn";
 
         $preference->save();
