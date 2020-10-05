@@ -57,6 +57,9 @@ class Pay
             $preference = new MercadoPago\Preference();
             $preference = $preference->find_by_id($body['mercadopagoPreferenceId']);
 
+            $mPayment = new MercadoPago\Payment();
+            $mPayment = $mPayment->find_by_id($body['mercadopagoPaymentId']);
+
             if ( !is_null($preference->id) ) {
                 $checkoutData['mercadopagoPreferenceId'] = $body['mercadopagoPreferenceId'];
 
@@ -66,7 +69,7 @@ class Pay
                     'mercadopago_preference_id' => $body['mercadopagoPreferenceId'],
                     'mercadopago_payment_id'    => $body['mercadopago_payment_id']
                 ]);
-
+                // TODO: Set $pay data with $mPayment data
             } else {
                 throw new BadRequestHttpException('Preference not found');
             }

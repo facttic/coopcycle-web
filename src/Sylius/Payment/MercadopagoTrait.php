@@ -45,13 +45,10 @@ trait MercadopagoTrait
     public function getMercadopagoPreference()
     {
         if (isset($this->details['mercadopago_preference_id'])) {
-
             return [
                 'mercadopago_preference_id' => $this->details['mercadopago_preference_id'],
                 'mercadopago_payment_id'    => $this->details['mercadopago_payment_id']
             ];
         }
     }
-
-
 }
