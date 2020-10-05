@@ -603,16 +603,17 @@ form.local_business.stripe_account.link_ok: "This restaurant is linked to a Stri
   \ account and can receive payments from the platform.<br>\nTo manage your Stripe\
   \ account and the transfers to your account, please use the <a href=\"https://dashboard.stripe.com/\"\
   \ target=\"_blank\">Stripe dashboard</a>.\n"
-form.settings.mercadopago.title: Mercado Pago
+form.settings.mercadopago.title: MercadoPago
 form.local_business.mercadopago_account.title: MercadoPago Account
 form.local_business.mercadopago_account.success: MercadoPago account successfully connected
 form.local_business.mercadopago_account.unlinked.success: MercadoPago account unlinked successfuly
 form.local_business.mercadopago_account.unlink.error: Something happened, MercadoPago account could not be unlinked.
-form.local_business.mercadopago.connect_button.text: Connect with Mercado Pago
-form.local_business.mercadopago.disconnect_button.text: Disconnect from Mercado Pago.
-form.mercadopago_livemode.enable.label: Use Mercadopago in « live » mode
+form.local_business.mercadopago_account.unlink.error_pending_orders: This restaurant has pending orders, MercadoPago account cannot be unlinked.
+form.local_business.mercadopago.connect_button.text: Connect with MercadoPago
+form.local_business.mercadopago.disconnect_button.text: Disconnect from MercadoPago.
+form.mercadopago_livemode.enable.label: Use MercadoPago in « live » mode
 form.mercadopago_livemode.enable.alert: In « live » mode, credit cards will be charged.
-form.mercadopago_livemode.disable.label: Use Mercadopago in « test » mode
+form.mercadopago_livemode.disable.label: Use MercadoPago in « test » mode
 form.mercadopago_livemode.disable.alert: In « test » mode, credit cards will not be charged.
 form.mercadopago_livemode.disable_and_enable_maintenance.label: Switch to « test » mode and enable maintenance
 form.mercadopago_livemode.disable_and_enable_maintenance.alert: You are in « live » mode.<br>If you switch to « test » mode, maintenance will be enabled automatically.
