@@ -1,10 +1,10 @@
-{% set show_taxes = (country_iso == 'ca') or (with_taxes is not defined) or (with_taxes is defined and with_taxes == true) %}
+{% set show_taxes = (not tax_incl) or (with_taxes is not defined) or (with_taxes is defined and with_taxes == true) %}
 {% set with_items = with_items is defined ? with_items : true %}
 
 <table class="table table-order-items">
   <thead>
     <th>{% trans with { '%count%': order.countItems } %}order.items.products_with_count{% endtrans %}</th>
-    <th class="text-right">Total</th>
+    <th class="text-right">{{ 'order.list.total'|trans }}</th>
   </thead>
   {% if with_items %}
   <tbody>
@@ -53,7 +53,7 @@
     <tr>
       <th>{% trans %}order.items_total{% endtrans %}</th>
       <td class="text-right text-nowrap">
-        {{ show_taxes ? (order.itemsTotalExcludingTax|price_format) : (order.itemsTotal|price_format) }}
+        {{ tax_incl ? (order.itemsTotal|price_format) : (order.itemsTotalExcludingTax|price_format) }}
       </td>
     </tr>
     {% if delivery_adjustments|length > 0 %}

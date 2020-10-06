@@ -221,6 +221,7 @@ restaurant.closingForm.reason.label: Motif
 restaurant.closingForm.dates.label: Fermeture de/à
 restaurant.list.manage: Gérer
 restaurant.list.orders: Commandes
+restaurant.list.refunds: Remboursements
 restaurant.list.products: Produits
 restaurant.list.product_options: Options
 restaurant.list.menus: Menus
@@ -411,13 +412,11 @@ form.order.fulfill.label: Terminer
 form.order.payment_complete.label: Valider
 form.order.payment_refund.label: Rembourser
 form.order.refund_modal.title: Remboursement
-form.payment.refund_amount.label: Montant
+form.payment.state.label: État
+form.payment.amount.label: Montant
+form.payment.refund_amount.label: Montant remboursé
+form.payment.last_update.label: Dernière mise à jour
 form.payment.refund_amount.help: Le montant que vous indiquez sera remboursé au client
-form.payment.refund_application_fee.label: Rembourser les frais
-form.payment.refund_application_fee.help: "Si vous cochez cette case, la commission\
-  \ prélevée par la plateforme au partenaire sera remboursés au pro-rata\n<br>\n<a\
-  \ href=\"https://stripe.com/docs/connect/direct-charges#issuing-refunds\">En savoir\
-  \ plus</a>\n"
 form.delivery_embed.name.label: Nom
 form.delivery_embed.name.help: Votre nom ou le nom de l'entreprise
 form.delivery_embed.telephone.label: Numéro de téléphone
@@ -1038,3 +1037,8 @@ form:
       label: Contact de la personne référente pour le restaurant
     b2b:
       label: Souhaitez-vous proposer une offre à destination des entreprises ?
+refund.list.debit_total: Montant total dû par la plateforme à l'entreprise
+refund.list.refunded_at: Remboursé à
+refund.list.liable_party: Partie responsable
+refund.list.amount: Montant du remboursement
+refund.list.comments: Commentaires

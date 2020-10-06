@@ -1,7 +1,7 @@
 import React from 'react'
 import parsePricingRule from '../delivery/pricing-rule-parser'
 
-export class DeliveryZonePicker extends React.Component {
+export default class DeliveryZonePicker extends React.Component {
   constructor (props) {
     super(props)
 
@@ -71,7 +71,7 @@ export class DeliveryZonePicker extends React.Component {
       )
     case 'distance':
       return (
-        <input type="number" value={ value } onChange={this.onChange} className="form-control" min="0" required />
+        <input type="number" value={ value } onChange={this.onChange} className="form-control" min="0" step=".5" required />
       )
     }
   }

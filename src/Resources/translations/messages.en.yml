@@ -243,6 +243,7 @@ restaurant.closingForm.reason.label: Reason
 restaurant.closingForm.dates.label: Closing from/to
 restaurant.list.manage: Manage
 restaurant.list.orders: Orders
+restaurant.list.refunds: Refunds
 restaurant.list.products: Products
 restaurant.list.product_options: Options
 restaurant.list.menus: Menus
@@ -456,9 +457,15 @@ form.order.refund_modal.title: Refund
 form.order.refuse.refund.alert: This order was paid with a payment method that does
   not manage pre-authorizations. If you refuse it, the payment will be refunded. Are
   you sure?
-form.payment.refund_amount.label: Amount
+form.payment.state.label: State
+form.payment.amount.label: Amount
+form.payment.refund_amount.label: Refunded Amount
+form.payment.last_update.label: Last update
 form.payment.refund_amount.help: The amount you specify will be refunded to the customer
-form.payment.refund_application_fee.label: Refund fees
+form.payment.refund_liable.label: Liable party
+form.payment.refund_liable.help: Which party is liable for the incident?
+form.payment.refund_comment.label: Comments
+form.payment.refund_comment.help: Please describe what happened
 form.payment.refund_application_fee.help: "If you check this box, the commission charged\
   \ by the platform to the partner will be refunded proportionally\n<br>\n<a href=\"\
   https://stripe.com/docs/connect/direct-charges#issuing-refunds\">Learn more</a>\n"
@@ -528,16 +535,6 @@ form.settings.enable_restaurant_pledges.label: Allow customers to suggest restau
 form.settings.company_logo.label: Company logo
 form.settings.company_logo.help: This logo will be used invoices & proofs of delivery
 form.settings.subject_to_vat.label: Subject to VAT
-form.settings.mercadopago.title: Mercado Pago
-form.settings.mercadopago.publishable_key.label: Publishable key
-form.settings.mercadopago.publishable_key.help: "Get the <a href=\"\
-  https://www.mercadopago.com.%country%/developers/panel/credentials\" target=\"_blank\">publishable key</a>"
-form.settings.mercadopago.access_token.label: Access token
-form.settings.mercadopago.access_token.help: "Get the <a href=\"\
-  https://www.mercadopago.com.%country%/developers/panel/credentials\" target=\"_blank\">access token</a>"
-form.settings.mercadopago.app_id.label: Application ID
-form.settings.mercadopago.app_id.help: You need to <a href="https://www.mercadopago.com.br/developers/es/guides/marketplace/api/create-marketplace/">create an application</a> to obtain your application ID.
-form.settings.mercadopago.redirect_uri.help: "When configuring your app, use the following redirect URI: <code>%redirect_uri%</code>"
 form.suggest.name.label: Name
 form.suggest.name.help: Please indicate the exact name so that we can find it
 form.suggest.submit.label: Suggest now
@@ -606,8 +603,27 @@ form.local_business.stripe_account.link_ok: "This restaurant is linked to a Stri
   \ account and can receive payments from the platform.<br>\nTo manage your Stripe\
   \ account and the transfers to your account, please use the <a href=\"https://dashboard.stripe.com/\"\
   \ target=\"_blank\">Stripe dashboard</a>.\n"
-form.local_business.mercadopago.connect_button.text: Connect with Mercado Pago
+form.settings.mercadopago.title: Mercado Pago
 form.local_business.mercadopago_account.title: MercadoPago Account
+form.local_business.mercadopago_account.success: MercadoPago account successfully connected
+form.local_business.mercadopago.connect_button.text: Connect with Mercado Pago
+form.mercadopago_livemode.enable.label: Use Mercadopago in « live » mode
+form.mercadopago_livemode.enable.alert: In « live » mode, credit cards will be charged.
+form.mercadopago_livemode.disable.label: Use Mercadopago in « test » mode
+form.mercadopago_livemode.disable.alert: In « test » mode, credit cards will not be charged.
+form.mercadopago_livemode.disable_and_enable_maintenance.label: Switch to « test » mode and enable maintenance
+form.mercadopago_livemode.disable_and_enable_maintenance.alert: You are in « live » mode.<br>If you switch to « test » mode, maintenance will be enabled automatically.
+form.settings.mercadopago_testmode.help: 'In « test » mode, you will have to use <a href="https://www.mercadopago.com.ar/developers/en/guides/online-payments/checkout-api/testing#bookmark_how_to_test_your_integration">test credit cards</a> numbers to pay on the platform. <strong>No money will be exchanged.</strong> '
+form.settings.mercadopago_enable_livemode.help: To enable « live » mode, you need to configure « live » keys first.
+form.settings.mercadopago.publishable_key.label: Publishable key
+form.settings.mercadopago.publishable_key.help: "Get the <a href=\"\
+  https://www.mercadopago.com.%country%/developers/panel/credentials\" target=\"_blank\">publishable key</a>"
+form.settings.mercadopago.access_token.label: Access token
+form.settings.mercadopago.access_token.help: "Get the <a href=\"\
+  https://www.mercadopago.com.%country%/developers/panel/credentials\" target=\"_blank\">access token</a>"
+form.settings.mercadopago.app_id.label: Application ID
+form.settings.mercadopago.app_id.help: You need to <a href="https://www.mercadopago.com.br/developers/es/guides/marketplace/api/create-marketplace/">create an application</a> to obtain your application ID.
+form.settings.mercadopago.redirect_uri.help: "When configuring your app, use the following redirect URI: <code>%redirect_uri%</code>"
 form.menu_item.name.label: Name
 form.menu_item.price.label: Price
 form.menu_item_modifier.name.label: Name
@@ -729,6 +745,8 @@ form.customize.custom_terms_enabled.label: Enable custom terms & conditions
 form.customize.custom_terms.label: Custom terms & conditions page content
 form.customize.custom_privacy_enabled.label: Enable custom privacy policy
 form.customize.custom_privacy.label: Custom privacy policy page content
+form.customize.custom_banner.label: Custom banner
+form.customize.custom_banner.help: Make sure that the banner is a repeatable SVG pattern
 promotion_coupon.used.label: Number of uses
 product_option.strategy.free: Free
 product_option.strategy.option_value: Each option has a different price
@@ -1061,3 +1079,11 @@ form:
       label: Contact person for the restaurant
     b2b:
       label: Would you like to propose special offers for companies?
+refund.list.amount: Refunded amount
+refund.list.liable_party: Liable party
+refund.list.comments: Comments
+refund.list.debit_total: Total amount due by the platform to the business
+refund.list.refunded_at: Refunded at
+refund.list.disclaimer.admin: "When the platform is responsible for the incident, \
+  it means the platform owes the merchant the amount of the refund, because the merchant actually refunded the customer."
+form.time_slot.choices.error.empty: The list of choices cannot be empty

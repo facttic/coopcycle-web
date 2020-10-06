@@ -8,6 +8,7 @@ import Select from 'react-select'
 import i18n from '../i18n'
 import DropzoneWidget from '../widgets/Dropzone'
 import OpeningHoursInput from '../widgets/OpeningHoursInput'
+import DeliveryZonePicker from '../components/DeliveryZonePicker'
 
 Dropzone.autoDiscover = false
 
@@ -85,6 +86,10 @@ const onInvalid = function(e) {
   }
 }
 
+// FIXME
+// This doesn't work for elements added after page load (like DeliveryZonePicker)
+// We would need to use event delegation, but "invalid" event doesn't bubble
+// https://stackoverflow.com/questions/18462859/why-is-the-event-listener-for-the-invalid-event-not-being-called-when-using-even
 document.querySelector('form[name="restaurant"]')
   .querySelectorAll('input,select,textarea')
   .forEach(el => el.addEventListener('invalid', onInvalid))
@@ -100,14 +105,12 @@ $(function() {
 
   const zonePickerEl = document.getElementById('restaurant_deliveryPerimeterExpression__picker')
   if (zonePickerEl) {
-    window.CoopCycle.DeliveryZonePicker(
-      zonePickerEl,
-      {
-        zones: JSON.parse(formData.dataset.zones),
-        expression: formData.dataset.restaurantDeliveryPerimeterExpression,
-        onExprChange: (expr) => { $('#restaurant_deliveryPerimeterExpression').val(expr)}
-      }
-    )
+    render(
+      <DeliveryZonePicker
+        zones={ JSON.parse(formData.dataset.zones) }
+        expression={ formData.dataset.restaurantDeliveryPerimeterExpression }
+        onExprChange={ expr => $('#restaurant_deliveryPerimeterExpression').val(expr) }
+      />, zonePickerEl)
   }
 
   const openingHoursInputs = new Map()

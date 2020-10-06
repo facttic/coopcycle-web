@@ -38,8 +38,10 @@ use Sylius\Component\Order\Model\Order as BaseOrder;
 use Sylius\Component\Payment\Model\PaymentInterface;
 use Sylius\Component\Promotion\Model\PromotionInterface;
 use Sylius\Component\Promotion\Model\PromotionCouponInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Serializer\Annotation\SerializedName;
+use Symfony\Component\Validator\Constraints as Assert;
 use Sylius\Component\Taxation\Model\TaxRateInterface;
 
 /**
@@ -230,6 +232,9 @@ class Order extends BaseOrder implements OrderInterface
 
     protected $restaurant;
 
+    /**
+     * @Assert\Valid(groups={"cart"})
+     */
     protected $shippingAddress;
 
     protected $billingAddress;
@@ -263,6 +268,13 @@ class Order extends BaseOrder implements OrderInterface
 
     protected $shippingTimeRange;
 
+    /**
+     * @Assert\Expression(
+     *   "!this.isTakeaway() or (this.isTakeaway() and this.getRestaurant().isFulfillmentMethodEnabled('collection'))",
+     *   message="order.collection.not_available",
+     *   groups={"cart"}
+     * )
+     */
     protected $takeaway = false;
 
     const SWAGGER_CONTEXT_TIMING_RESPONSE_SCHEMA = [
@@ -522,6 +534,8 @@ class Order extends BaseOrder implements OrderInterface
         if ($this->payments->isEmpty()) {
             return null;
         }
+
+        // TODO Order payments by creation date
 
         $payment = $this->payments->filter(function (PaymentInterface $payment) use ($state): bool {
             return null === $state || $payment->getState() === $state;
@@ -850,9 +864,20 @@ class Order extends BaseOrder implements OrderInterface
         $this->takeaway = $takeaway;
     }
 
+    /**
+     * @SerializedName("fulfillmentMethod")
+     */
     public function getFulfillmentMethod(): string
     {
         return $this->isTakeaway() ? 'collection' : 'delivery';
+    }
+
+    /**
+     * @SerializedName("fulfillmentMethod")
+     */
+    public function setFulfillmentMethod(string $fulfillmentMethod)
+    {
+        $this->setTakeaway($fulfillmentMethod === 'collection');
     }
 
     public function getRefundTotal(): int
@@ -882,6 +907,22 @@ class Order extends BaseOrder implements OrderInterface
         return false;
     }
 
+    public function getRefunds(): array
+    {
+        $refunds = [];
+        foreach ($this->getPayments() as $payment) {
+            if (PaymentInterface::STATE_COMPLETED === $payment->getState()) {
+                if ($payment->hasRefunds()) {
+                    foreach ($payment->getRefunds() as $refund) {
+                        $refunds[] = $refund;
+                    }
+                }
+            }
+        }
+
+        return $refunds;
+    }
+
     /**
      * @SerializedName("assignedTo")
      * @Groups({"dispatch"})
@@ -895,5 +936,21 @@ class Order extends BaseOrder implements OrderInterface
                 return $pickup->getAssignedCourier()->getUsername();
             }
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getUser(): ?UserInterface
+    {
+        if (null === $this->customer) {
+            return null;
+        }
+
+        if ($this->customer instanceof UserInterface) {
+            return $this->customer;
+        }
+
+        return $this->customer->getUser();
     }
 }
