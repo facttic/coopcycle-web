@@ -1310,7 +1310,20 @@ trait RestaurantTrait
         $restaurant = $restaurantMercadopagoAccounts->getRestaurant();
         $orders = $restaurant->getOrders();
 
-        if ( $orders->isEmpty() ) { # no pending orders
+        $pendingOrders=false;
+
+        foreach ($orders as $key => $ordervalue) {
+
+            $states = array("new", "accepted");
+
+            if (in_array($ordervalue->getState(), $states)) {
+                $pendingOrders = true;
+                break;
+            }
+        }
+
+
+        if ( $orders->isEmpty() or !$pendingOrders) { # no pending orders
 
             // request to Mercadopago
             // curl -X DELETE https://api.mercadolibre.com/users/$USER_ID/applications/$APP_ID?access_token=$ACCESS_TOKEN
