@@ -60,18 +60,24 @@ class Pay
             $mPayment = new MercadoPago\Payment();
             $mPayment = $mPayment->find_by_id($body['mercadopagoPaymentId']);
 
-            if ( !is_null($preference->id) ) {
+            if ( !is_null($preference->id) && !is_null($mPayment->id) ) {
                 $checkoutData['mercadopagoPreferenceId'] = $body['mercadopagoPreferenceId'];
+
+                $payerEmailMP = $mPayment->payer->email;
+                $payerEmailOrder = $data->getCustomer()->getEmail();
+                if ( $payerEmailMP !== $payerEmailOrder ) {
+                    throw new BadRequestHttpException('Payer email and customer email don\'t match');
+                }
 
                 $pay = new Payment();
                 $pay->setOrder($data);
                 $pay->setMercadopagoPreference([
                     'mercadopago_preference_id' => $body['mercadopagoPreferenceId'],
-                    'mercadopago_payment_id'    => $body['mercadopago_payment_id']
+                    'mercadopago_payment_id'    => $body['mercadopagoPaymentId']
                 ]);
                 // TODO: Set $pay data with $mPayment data
             } else {
-                throw new BadRequestHttpException('Preference not found');
+                throw new BadRequestHttpException('Preference or Payment not found');
             }
         }
 
