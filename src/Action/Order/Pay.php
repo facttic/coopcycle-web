@@ -33,23 +33,6 @@ class Pay
             $body = json_decode($content, true);
         }
 
-        $checkoutData = [];
-        // FIXME: I'm preserving 'stripeToken' key because I don't know how this change will impact in other features.
-        $checkoutData = isset($body['stripeToken']) ?
-                        [
-                            'stripeToken' => $body['stripeToken'],
-                            'type'  => 'stripe'
-                        ] :
-                        (isset($body['mercadopagoToken']) ?
-                            [
-                                'stripeToken' => $body['mercadopagoToken'],
-                                'type'  => 'mercadopago'
-                            ] : [ 'stripeToken'  => null ] );
-
-        if (null == $checkoutData['stripeToken']) {
-            throw new BadRequestHttpException('Payment token is missing');
-        }
-
         $payment = $data->getLastPayment(PaymentInterface::STATE_CART);
 
         if (isset($body['mercadopagoPreferenceId'])) {
@@ -64,8 +47,12 @@ class Pay
             if ( !is_null($preference->id) && !is_null($mPayment->id) ) {
                 $payerEmailMP = $mPayment->payer->email;
                 $payerEmailOrder = $data->getCustomer()->getEmail();
+
                 if ( $payerEmailMP !== $payerEmailOrder ) {
-                    throw new BadRequestHttpException('Payer email and customer email don\'t match');
+                    // This is needed because MP gives you a fixed email that does not validate
+                    if (!$_SERVER['APP_DEBUG']) {
+                        throw new BadRequestHttpException('Payer email and customer email don\'t match');
+                    }
                 }
 
                 $payment = new Payment();
@@ -81,6 +68,21 @@ class Pay
                 throw new BadRequestHttpException('Preference or Payment not found');
             }
         } else {
+            $checkoutData = [];
+            // FIXME: I'm preserving 'stripeToken' key because I don't know how this change will impact in other features.
+            $checkoutData = isset($body['stripeToken']) ?
+                            [
+                                'stripeToken' => $body['stripeToken'],
+                                'type'  => 'stripe'
+                            ] :
+                            (isset($body['mercadopagoToken']) ?
+                                [
+                                    'stripeToken' => $body['mercadopagoToken'],
+                                    'type'  => 'mercadopago'
+                                ] : [ 'stripeToken'  => null ] );
+            if (null == $checkoutData['stripeToken']) {
+                throw new BadRequestHttpException('Payment token is missing');
+            }
             // If it doesn't comes from the app proceed with the usual flow
             // I don't think this is the way to do it, but it works :person_shrugging:
             $this->orderManager->checkout($data, $checkoutData);
