@@ -87,6 +87,9 @@ class CheckoutHandler
                 }
             } else {
                 $this->orderNumberAssigner->assignNumber($order);
+                if ($stripeToken) {
+                    $payment->setStripeToken($stripeToken);
+                }
 
                 $data = $command->getData();
 
