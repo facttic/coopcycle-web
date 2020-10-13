@@ -60,7 +60,7 @@ class MercadopagoManager
         $p = new MercadoPago\Payment();
 
         $p->transaction_amount = ($payment->getAmount() / 100);
-        $p->token = $payment->getStripeToken();
+        $p->token = $payment->getStripeToken(); // FIXME change this to MercadoPagoToken/MercadoPagoPaymentId.
         $p->description = sprintf('Order %s', $order->getNumber());
         $p->installments = $payment->getMercadopagoInstallments() ?? 1;
         $p->payment_method_id = $payment->getMercadopagoPaymentMethod();
@@ -111,5 +111,42 @@ class MercadopagoManager
         }
 
         return $payment;
+    }
+
+    /**
+     * @return MercadoPago\Refund
+     */
+    public function refund(PaymentInterface $payment, $amount = null)
+    {
+        // FIXME
+        // Check if the charge was made in test or live mode
+        // To achieve this, we need to store a "livemode" key in payment details
+        $this->configure();
+
+        $order = $payment->getOrder();
+        $restaurant = $order->getRestaurant();
+        $account = $restaurant->getMercadopagoAccount(false);
+
+        $options = [];
+        $options['custom_access_token'] = $account->getAccessToken();
+
+        // MercadoPago Payment
+        // $mPayment = MercadoPago\Payment::read(["id" => $payment->getCharge()], ["custom_access_token" => $options['custom_access_token']]);   
+        $mPayment = MercadoPago\Payment::find_by_id($payment->getCharge());
+
+        if ( ($mPayment->status === "pending") || ($mPayment->status === "in_process") ) { // you can cancel the order
+            $mPayment->status = "cancelled";
+            $mPayment->update();
+
+        } elseif ($mPayment->status === "approved") { // you need to refund
+            $mPayment->refund();
+        }
+
+        dump($mPayment);
+        dump($mPayment->error);
+        dump($payment);
+            
+        exit();
+        return $refund;
     }
 }

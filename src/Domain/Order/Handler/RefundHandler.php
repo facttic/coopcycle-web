@@ -3,9 +3,11 @@
 namespace AppBundle\Domain\Order\Handler;
 
 use AppBundle\Domain\Order\Command\Refund as RefundCommand;
+use AppBundle\Payment\GatewayResolver;
 use AppBundle\Domain\Order\Event;
 use AppBundle\Entity\Refund;
 use AppBundle\Service\StripeManager;
+use AppBundle\Service\MercadopagoManager;
 use SimpleBus\Message\Recorder\RecordsMessages;
 use SM\Factory\FactoryInterface as StateMachineFactoryInterface;
 use Sylius\Component\Payment\Model\PaymentInterface;
@@ -14,15 +16,20 @@ use Sylius\Component\Payment\PaymentTransitions;
 class RefundHandler
 {
     private $stripeManager;
+    private $mercadopagoManager;
     private $stateMachineFactory;
     private $eventRecorder;
 
     public function __construct(
         StripeManager $stripeManager,
+        GatewayResolver $gatewayResolver,
+        MercadopagoManager $mercadopagoManager,
         StateMachineFactoryInterface $stateMachineFactory,
         RecordsMessages $eventRecorder)
     {
         $this->stripeManager = $stripeManager;
+        $this->mercadopagoManager = $mercadopagoManager;
+        $this->gatewayResolver = $gatewayResolver;
         $this->stateMachineFactory = $stateMachineFactory;
         $this->eventRecorder = $eventRecorder;
     }
@@ -45,7 +52,18 @@ class RefundHandler
 
         $transition = $isPartial ? 'refund_partially' : PaymentTransitions::TRANSITION_REFUND;
 
-        $refund = $this->stripeManager->refund($payment, $amount);
+        $gateway = $this->gatewayResolver->resolve();
+
+        switch ($gateway) {
+            case 'mercadopago':
+                $refund = $this->mercadopagoManager->refund($payment, $amount);
+                break;
+
+            case 'stripe':
+            default:
+                $refund = $this->stripeManager->refund($payment, $amount);
+                break;
+        }
 
         if ($payment->getState() === 'refunded_partially' && $transition !== 'refund_partially') {
             $stateMachine->apply($transition);
