@@ -463,6 +463,8 @@ form.payment.refund_amount.label: Refunded Amount
 form.payment.last_update.label: Last update
 form.payment.refund_amount.help: The amount you specify will be refunded to the customer
 form.payment.refund_liable.label: Liable party
+form.payment.refund_liable.merchant_label: Merchant
+form.payment.refund_liable.platform_label: Platform
 form.payment.refund_liable.help: Which party is liable for the incident?
 form.payment.refund_comment.label: Comments
 form.payment.refund_comment.help: Please describe what happened

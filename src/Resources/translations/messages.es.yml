@@ -323,6 +323,12 @@ form.payment.amount.label: Monto
 form.payment.refund_amount.label: Monto de reembolso
 form.payment.last_update.label: Ultima actualización
 form.payment.refund_amount.help: El importe que especifique será devuelto al cliente
+form.payment.refund_liable.label: Parte responsable
+form.payment.refund_liable.merchant_label: Vendedor
+form.payment.refund_liable.platform_label: Plataforma
+form.payment.refund_liable.help: ¿Qué parte es responsable por el incidente?
+form.payment.refund_comment.label: Comentarios
+form.payment.refund_comment.help: Por favor describa qué ha ocurrido.
 form.address.streetAddress.label: Dirección
 form.address.streetAddress.error.noLatLng: Selecciona una dirección en el menú desplegable
 form.address.name.label: Nombre

@@ -53,8 +53,8 @@ class PaymentType extends AbstractType
                         ]);
                         $form->add('liable', ChoiceType::class, [
                             'choices'  => [
-                                'Merchant' => 'merchant',
-                                'Platform' => 'platform',
+                                'form.payment.refund_liable.merchant_label' => 'merchant',
+                                'form.payment.refund_liable.platform_label' => 'platform',
                             ],
                             'label' => 'form.payment.refund_liable.label',
                             'help' => 'form.payment.refund_liable.help',
