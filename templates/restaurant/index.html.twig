@@ -7,7 +7,7 @@
 
 {% block structured_data %}
 <script type="application/ld+json">
-{{ structured_data|json_encode(constant('JSON_PRETTY_PRINT') b-or constant('JSON_UNESCAPED_SLASHES'))|raw }}
+{{ restaurant|restaurant_microdata|json_encode(constant('JSON_PRETTY_PRINT') b-or constant('JSON_UNESCAPED_SLASHES'))|raw }}
 </script>
 {% endblock %}
 
@@ -34,19 +34,23 @@
 {% block body %}
 <div class="container">
 
-  <div class="homepage-restaurants__show-more text-left mb-4">
-    {% if restaurant.context == 'AppBundle\\Enum\\Store' %}
-      <a class="restaurant-show-more" href="{{ path('stores') }}">
-        <i class="fa fa-arrow-left mr-2"></i>
-        <span>{% trans %}index.view_all_shops{% endtrans %}</span>
-      </a>
-    {% else %}
-      <a class="restaurant-show-more" href="{{ path('restaurants') }}">
-        <i class="fa fa-arrow-left mr-2"></i>
-        <span>{% trans %}index.view_all_restaurants{% endtrans %}</span>
-      </a>
+  {% block restaurant_nav %}
+    {% if not embed_context.enabled %}
+    <div class="homepage-restaurants__show-more text-left mb-4">
+      {% if restaurant.context == 'AppBundle\\Enum\\Store' %}
+        <a class="restaurant-show-more" href="{{ path('stores') }}">
+          <i class="fa fa-arrow-left mr-2"></i>
+          <span>{% trans %}index.view_all_shops{% endtrans %}</span>
+        </a>
+      {% else %}
+        <a class="restaurant-show-more" href="{{ path('restaurants') }}">
+          <i class="fa fa-arrow-left mr-2"></i>
+          <span>{% trans %}index.view_all_restaurants{% endtrans %}</span>
+        </a>
+      {% endif %}
+    </div>
     {% endif %}
-  </div>
+  {% endblock %}
 
   {% if not restaurant.isOpen %}
     {% if restaurant.hasClosingRuleFor %}

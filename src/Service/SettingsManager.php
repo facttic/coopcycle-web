@@ -8,6 +8,7 @@ use Doctrine\Persistence\ManagerRegistry;
 use libphonenumber\NumberParseException;
 use libphonenumber\PhoneNumberUtil;
 use Psr\Log\LoggerInterface;
+use AppBundle\Payment\GatewayResolver;
 
 class SettingsManager
 {
@@ -17,6 +18,7 @@ class SettingsManager
     private $country;
     private $doctrine;
     private $logger;
+    private $gatewayResolver;
 
     private $mandatorySettings = [
         'brand_name',
@@ -33,11 +35,19 @@ class SettingsManager
         'stripe_live_publishable_key',
         'stripe_live_secret_key',
         'stripe_live_connect_client_id',
+        'payment_gateway',
+        'payment_method_publishable_key',
         'google_api_key',
         'mercadopago_test_publishable_key',
         'mercadopago_live_publishable_key',
         'mercadopago_test_access_token',
         'mercadopago_live_access_token',
+    ];
+
+    private static $boolean = [
+        'sms_enabled',
+        'subject_to_vat',
+        'guest_checkout_enabled',
     ];
 
     private $cache = [];
@@ -50,7 +60,8 @@ class SettingsManager
         string $country,
         bool $foodtechEnabled,
         bool $b2bEnabled,
-        LoggerInterface $logger)
+        LoggerInterface $logger,
+        GatewayResolver $gatewayResolver)
     {
         $this->craueConfig = $craueConfig;
         $this->configEntityName = $configEntityName;
@@ -60,6 +71,7 @@ class SettingsManager
         $this->foodtechEnabled = $foodtechEnabled;
         $this->b2bEnabled = $b2bEnabled;
         $this->logger = $logger;
+        $this->gatewayResolver = $gatewayResolver;
     }
 
     public function isSecret($name)
@@ -70,6 +82,8 @@ class SettingsManager
     public function get($name)
     {
         switch ($name) {
+            case 'payment_gateway':
+                return $this->gatewayResolver->resolve();
             case 'stripe_publishable_key':
                 $name = $this->isStripeLivemode() ? 'stripe_live_publishable_key' : 'stripe_test_publishable_key';
                 break;
@@ -78,6 +92,12 @@ class SettingsManager
                 break;
             case 'stripe_connect_client_id':
                 $name = $this->isStripeLivemode() ? 'stripe_live_connect_client_id' : 'stripe_test_connect_client_id';
+                break;
+            case 'mercadopago_publishable_key':
+                $name = $this->isMercadopagoLivemode() ? 'mercadopago_live_publishable_key' : 'mercadopago_test_publishable_key';
+                break;
+            case 'mercadopago_access_token':
+                $name = $this->isMercadopagoLivemode() ? 'mercadopago_live_access_token' : 'mercadopago_test_access_token';
                 break;
             case 'timezone':
                 return ini_get('date.timezone');
@@ -102,10 +122,10 @@ class SettingsManager
                         $value = $this->phoneNumberUtil->parse($value, strtoupper($this->country));
                     } catch (NumberParseException $e) {}
                     break;
-                case 'sms_enabled':
-                case 'subject_to_vat':
-                    $value = (bool) $value;
-                    break;
+            }
+
+            if (in_array($name, self::$boolean)) {
+                $value = (bool) $value;
             }
 
             $this->cache[$name] = $value;
@@ -123,6 +143,17 @@ class SettingsManager
     public function isStripeLivemode()
     {
         $livemode = $this->get('stripe_livemode');
+
+        if (!$livemode) {
+            return false;
+        }
+
+        return filter_var($livemode, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    public function isMercadopagoLivemode()
+    {
+        $livemode = $this->get('mercadopago_livemode');
 
         if (!$livemode) {
             return false;
@@ -159,6 +190,32 @@ class SettingsManager
         }
     }
 
+    public function canEnableMercadopagoTestmode()
+    {
+        try {
+            $mercadopagoTestPublishableKey = $this->craueConfig->get('mercadopago_test_publishable_key');
+            $mercadopagoTestSecretKey = $this->craueConfig->get('mercadopago_test_access_token');
+
+            return !empty($mercadopagoTestPublishableKey) && !empty($mercadopagoTestSecretKey);
+
+        } catch (\RuntimeException $e) {
+            return false;
+        }
+    }
+
+    public function canEnableMercadopagoLivemode()
+    {
+        try {
+            $mercadopagoLivePublishableKey = $this->craueConfig->get('mercadopago_live_publishable_key');
+            $mercadopagoLiveSecretKey = $this->craueConfig->get('mercadopago_live_access_token');
+
+            return !empty($mercadopagoLivePublishableKey) && !empty($mercadopagoLiveSecretKey);
+
+        } catch (\RuntimeException $e) {
+            return false;
+        }
+    }
+
     public function canSendSms()
     {
         if (!$this->get('sms_enabled')) {
@@ -168,7 +225,7 @@ class SettingsManager
 
         $smsGateway = $this->get('sms_gateway');
 
-        if ('mailjet' !== $smsGateway) {
+        if (!$smsGateway || !in_array($smsGateway, ['mailjet', 'twilio'])) {
 
             return false;
         }
@@ -187,14 +244,19 @@ class SettingsManager
             return false;
         }
 
-        $whitelist = ['be', 'es', 'de', 'fr'];
-
-        if (!in_array($this->country, $whitelist)) {
-
-            return false;
+        switch ($smsGateway) {
+            case 'mailjet':
+                return in_array($this->country, ['be', 'es', 'de', 'fr'])
+                    && isset($smsGatewayConfig['api_token']);
+            case 'twilio':
+                return isset(
+                    $smsGatewayConfig['sid'],
+                    $smsGatewayConfig['auth_token'],
+                    $smsGatewayConfig['from']
+                );
         }
 
-        return isset($smsGatewayConfig['api_token']);
+        return false;
     }
 
     public function set($name, $value, $section = null)
@@ -262,11 +324,7 @@ class SettingsManager
             try {
                 $value = $this->craueConfig->get($name);
 
-                if ($name === 'sms_enabled') {
-                    $value = (bool) $value;
-                }
-
-                if ($name === 'subject_to_vat') {
+                if (in_array($name, self::$boolean)) {
                     $value = (bool) $value;
                 }
 

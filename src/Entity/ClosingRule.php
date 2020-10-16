@@ -3,32 +3,30 @@
 namespace AppBundle\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
+use AppBundle\Action\Restaurant\DeleteClosingRule;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 /**
  * @ApiResource(iri="https://schema.org/OpeningHoursSpecification",
  *   shortName="OpeningHoursSpecification",
- *   collectionOperations={
- *   },
+ *   collectionOperations={},
  *   itemOperations={
  *     "get"={"method"="GET"},
  *     "delete"={
  *       "method"="DELETE",
- *       "is_granted('ROLE_RESTAURANT') and user.ownsRestaurant(object.getRestaurant())"
+ *       "controller"=DeleteClosingRule::class,
+ *       "security"="is_granted('ROLE_RESTAURANT') and is_granted('delete', object)"
  *     },
  *   },
  * )
  */
 class ClosingRule
 {
-
     /**
      * @var int
      * @Groups({"restaurant", "planning"})
      */
     private $id;
-
-    private $restaurant;
 
     /**
      * @Groups({"restaurant", "planning"})
@@ -51,22 +49,6 @@ class ClosingRule
     public function getId()
     {
         return $this->id;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getRestaurant()
-    {
-        return $this->restaurant;
-    }
-
-    /**
-     * @param mixed $restaurant
-     */
-    public function setRestaurant($restaurant)
-    {
-        $this->restaurant = $restaurant;
     }
 
     /**

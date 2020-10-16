@@ -25,8 +25,10 @@ use AppBundle\Utils\OrderEventCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
 use FOS\UserBundle\Model\UserManagerInterface;
+use Knp\Component\Pager\PaginatorInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 use Lexik\Bundle\JWTAuthenticationBundle\Security\Authentication\Token\PreAuthenticationJWTUserToken;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWSProvider\JWSProviderInterface;
 use Cocur\Slugify\SlugifyInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManagerInterface;
@@ -93,7 +95,8 @@ class ProfileController extends Controller
         SlugifyInterface $slugify,
         TranslatorInterface $translator,
         JWTEncoderInterface $jwtEncoder,
-        IriConverterInterface $iriConverter)
+        IriConverterInterface $iriConverter,
+        PaginatorInterface $paginator)
     {
         $user = $this->getUser();
 
@@ -113,7 +116,7 @@ class ProfileController extends Controller
 
             $request->attributes->set('routes', $routes);
 
-            return $this->storeDeliveriesAction($store->getId(), $request, $translator);
+            return $this->storeDeliveriesAction($store->getId(), $request, $translator, $paginator);
 
             // FIXME Forward doesn't copy request attributes
             // return $this->forward('AppBundle\Controller\ProfileController::storeDeliveriesAction', [
@@ -138,10 +141,11 @@ class ProfileController extends Controller
             return $this->tasksAction($request);
         }
 
-        $loopeatEnabled = $this->getParameter('loopeat_enabled');
+        $customer = $user->getCustomer();
 
         $loopeatAuthorizeUrl = '';
-        if ($loopeatEnabled && !$this->getUser()->hasLoopEatCredentials()) {
+
+        if ($this->getParameter('loopeat_enabled') && !$customer->hasLoopEatCredentials()) {
 
             $redirectUri = $this->generateUrl('loopeat_oauth_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
@@ -154,7 +158,7 @@ class ProfileController extends Controller
             // Use a JWT as the "state" parameter
             $state = $jwtEncoder->encode([
                 'exp' => (new \DateTime('+1 hour'))->getTimestamp(),
-                'sub' => $iriConverter->getIriFromItem($this->getUser()),
+                'sub' => $iriConverter->getIriFromItem($customer),
                 // The "iss" (Issuer) claim contains a redirect URL
                 'iss' => $redirectAfterUri,
             ]);
@@ -172,8 +176,7 @@ class ProfileController extends Controller
 
         return $this->render('profile/index.html.twig', array(
             'user' => $user,
-            'loopeat_enabled' => $loopeatEnabled,
-            'has_loopeat_credentials' => $this->getUser()->hasLoopEatCredentials(),
+            'customer' => $customer,
             'loopeat_authorize_url' => $loopeatAuthorizeUrl,
         ));
     }
@@ -205,7 +208,7 @@ class ProfileController extends Controller
             ->createQueryBuilder('o')
             ->andWhere('o.customer = :customer')
             ->andWhere('o.state != :state')
-            ->setParameter('customer', $this->getUser())
+            ->setParameter('customer', $this->getUser()->getCustomer())
             ->setParameter('state', OrderInterface::STATE_CART);
 
         $count = (clone $qb)
@@ -231,6 +234,8 @@ class ProfileController extends Controller
         OrderManager $orderManager,
         DeliveryManager $deliveryManager,
         JWTManagerInterface $jwtManager,
+        JWSProviderInterface $jwsProvider,
+        IriConverterInterface $iriConverter,
         EntityManagerInterface $em)
     {
         $filter = $em->getFilters()->disable('enabled_filter');
@@ -243,32 +248,29 @@ class ProfileController extends Controller
 
         if ($order->isFoodtech()) {
 
-            $reset = false;
-            if ($request->query->has('reset')) {
-                $reset = $request->query->getBoolean('reset');
-            }
+            $exp = clone $order->getShippingTimeRange()->getUpper();
+            $exp->modify('+3 hours');
 
-            $trackGoal = false;
-            if ($request->getSession()->getFlashBag()->has('track_goal')) {
-                $messages = $request->getSession()->getFlashBag()->get('track_goal');
-                $trackGoal = !empty($messages);
-            }
+            // FIXME We may generate expired tokens
 
-            $goalId = getenv('MATOMO_CHECKOUT_COMPLETED_GOAL_ID');
-            if (!empty($goalId)) {
-                $goalId = intval($goalId);
-            }
+            $jwt = $jwsProvider->create([
+                // We add a custom "ord" claim to the token,
+                // that will allow watching order events
+                'ord' => $iriConverter->getIriFromItem($order),
+                // Token expires 3 hours after expected completion
+                'exp' => $exp->getTimestamp(),
+            ])->getToken();
 
-            return $this->render('order/foodtech.html.twig', [
-                'layout' => 'profile.html.twig',
+            return $this->render('profile/order.html.twig', [
                 'order' => $order,
                 'events' => (new OrderEventCollection($order))->toArray(),
-                'order_normalized' => $this->get('serializer')->normalize($order, 'jsonld', ['groups' => ['order'], 'is_web' => true]),
-                'breadcrumb_path' => 'profile_orders',
-                'reset' => $reset,
-                'track_goal' => $trackGoal,
-                'goal_id' => $goalId,
-                'jwt' => $jwtManager->create($this->getUser()),
+                'order_normalized' => $this->get('serializer')->normalize($order, 'jsonld', [
+                    'groups' => ['order'],
+                    'is_web' => true
+                ]),
+                'reset' => false,
+                'track_goal' => false,
+                'jwt' => $jwt,
             ]);
         }
 

@@ -63,7 +63,8 @@ class SetupCommand extends Command
 
     private $channels = [
         'web' => 'Web',
-        'app' => 'App'
+        'app' => 'App',
+        'pro' => 'Pro'
     ];
 
     private $onDemandDeliveryProductNames = [
@@ -118,7 +119,8 @@ class SetupCommand extends Command
         'USD',
         'SEK',
         'BRL',
-        'ARS'
+        'ARS',
+        'CRC',
     ];
 
     public function __construct(

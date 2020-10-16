@@ -19,7 +19,6 @@ embed.breadcrumb.confirm: Bestätigung
 adminDashboard.stores.form.uploadImage: Bild hochladen
 adminDashboard.orders.title: Bestellungen
 adminDashboard.restaurants.title: Restaurants
-
 adminDashboard.users.edit.addRestaurant: Restaurant hinzufügen
 adminDashboard.settings.title: Einstellungen
 adminDashboard.pricing.settings: Einstellungen
@@ -242,7 +241,7 @@ restaurant.menus.activated: Das Menü « %menu_name% » wurde aktiviert. Es wird
 restaurant.closingForm.title: Eine temporäre Schließzeit hinzufügen
 restaurant.closingForm.dates.label: Geschlossen von/bis
 restaurant.list.manage: Verwalten
-restaurant.list.orders: Bestellungen
+restaurant.list.orders: Rückerstattungen
 restaurant.list.product_options: Optionen
 restaurant.list.menus: Menüs
 restaurant.list.activeMenu: Aktives Menü
@@ -554,6 +553,7 @@ form.local_business.stripe_account.help: Verbinden Sie ein Stripe Konto um Geld 
   einem anderen Bankkonto zu überweisen
 form.local_business.stripe_account.connect_button.text: Mit Stripe verbinden
 form.local_business.stripe_account.success: Stripe Konto erfolgreich verbunden
+form.local_business.mercadopago_account.title: MercadoPago Konto
 form.menu_taxon.child_name.placeholder: "Zum Beispiel: Haupgerichte, Desserts, ...\n"
 form.menu_editor.save.label: Änderungen speichern
 form.menu_editor.taxon_modal.title: Ändern Sie einen Abschnitt
@@ -678,6 +678,7 @@ form.registration.legal.help: Indem Sie dieses Kästchen ankreuzen, erklären Si
   mit unseren <a href="%terms_url%">AGB</a> und <a href="%privacy_url%">Datenschutzerklärung</a>
   einverstanden.
 form.local_business.iso_code.fr.vat_number: USt.-Id Nr.
+form.local_business.iso_code.ar.cuit: CUIT/CUIL Nr.
 form.min_max.lower.label: Anzahl Min.
 orders.payment_refunded: Zahlung erfolgreich zurückerstattet
 orders.payment_link.sent: Email erfolgreich gesendet
@@ -687,3 +688,4 @@ orders.new: Neue Bestellung
 restaurant.form.cuisines.label: Küchenrichtung
 restaurant.form.fulfillment_methods.label: Möglichkeiten zur Auftragsausführung
 restaurant.form.loopeat_enabled.label: LoopEat System einschalten
+checkout.breadcrumb.confirm: Bestätigung

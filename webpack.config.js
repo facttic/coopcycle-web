@@ -11,6 +11,7 @@ Encore
   .addEntry('checkout-summary', './js/app/checkout/summary.js')
   .addEntry('dashboard', './js/app/dashboard/index.js')
   .addEntry('delivery-form', './js/app/delivery/form.js')
+  .addEntry('delivery-homepage', './js/app/delivery/homepage.js')
   .addEntry('delivery-list', './js/app/delivery/list.js')
   .addEntry('delivery-map', './js/app/delivery/map.js')
   .addEntry('delivery-embed-start-form', './js/app/delivery/embed-start.js')
@@ -21,6 +22,7 @@ Encore
   .addEntry('product-form', './js/app/product/form.js')
   .addEntry('product-list', './js/app/product/list.js')
   .addEntry('product-option-form', './js/app/forms/product-option.js')
+  .addEntry('register', './js/app/register/index.js')
   .addEntry('restaurant', './js/app/restaurant/index.js')
   .addEntry('restaurant-form', './js/app/restaurant/form.js')
   .addEntry('restaurant-list', './js/app/restaurant/list.js')
@@ -49,7 +51,14 @@ Encore
   .splitEntryChunks()
 
   .enablePostCssLoader()
-  .enableSassLoader(function(sassOptions) {}, {
+  .enableSassLoader(function(sassLoaderOptions) {
+    // https://github.com/twbs/bootstrap-sass#sass-number-precision
+    if (sassLoaderOptions.sassOptions) {
+      sassLoaderOptions.sassOptions.precision = 8
+    } else {
+      sassLoaderOptions.sassOptions = { precision: 8 }
+    }
+  }, {
     resolveUrlLoader: false
   })
   .enableLessLoader(function(lessLoaderOptions) {

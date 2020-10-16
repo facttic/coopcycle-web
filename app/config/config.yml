@@ -70,6 +70,7 @@ framework:
         handler_id: snc_redis.session.handler
         cookie_lifetime: 604800 # 7 days
         gc_maxlifetime: 604800 # 7 days
+        cookie_samesite: 'lax'
     fragments:       ~
     http_method_override: true
     assets: ~
@@ -132,6 +133,7 @@ twig:
         analytics_disabled: "%kernel.debug%"
         matomo_hostname: "%env(COOPCYCLE_MATOMO_HOSTNAME)%"
         matomo_site_id: "%env(COOPCYCLE_MATOMO_SITE_ID)%"
+        matomo_checkout_completed_goal_id: "%env(MATOMO_CHECKOUT_COMPLETED_GOAL_ID)%"
         countly_script: "%env(COOPCYCLE_COUNTLY_SCRIPT)%"
         countly_hostname: "%env(COOPCYCLE_COUNTLY_HOSTNAME)%"
         countly_app_key: "%env(COOPCYCLE_COUNTLY_APP_KEY)%"
@@ -141,6 +143,9 @@ twig:
         sentry_apm_enabled: "%env(bool:COOPCYCLE_SENTRY_APM_ENABLED)%"
         legacy_taxes: '%env(bool:COOPCYCLE_LEGACY_TAXES)%'
         payment_gateway_resolver: '@AppBundle\Payment\GatewayResolver'
+        context_channel: "@sylius.context.channel"
+        loopeat_enabled: '%env(bool:LOOPEAT_ENABLED)%'
+        embed_context: '@AppBundle\Embed\Context'
     exception_controller: null
 
 # Doctrine Configuration

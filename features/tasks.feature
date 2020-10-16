@@ -1212,15 +1212,16 @@ Feature: Tasks
     Given the fixtures files are loaded:
       | sylius_channels.yml |
       | stores.yml          |
+      | tags.yml            |
     Given the store with name "Acme" has an OAuth client named "Acme"
     And the OAuth client with name "Acme" has an access token
     When I add "Content-Type" header equal to "text/csv"
     And I add "Accept" header equal to "application/ld+json"
     And the OAuth client "Acme" sends a "POST" request to "/api/tasks/import" with body:
       """
-      type,address.streetAddress,address.telephone,address.name,after,before
-      pickup,"1, rue de Rivoli Paris",,Foo,2018-02-15 09:00,2018-02-15 10:00
-      dropoff,"54, rue du Faubourg Saint Denis Paris",,Bar,2018-02-15 09:00,2018-02-15 10:00
+      type,address.streetAddress,address.telephone,address.name,after,before,tags
+      pickup,"1, rue de Rivoli Paris",,Foo,2018-02-15 09:00,2018-02-15 10:00,"important"
+      dropoff,"54, rue du Faubourg Saint Denis Paris",,Bar,2018-02-15 09:00,2018-02-15 10:00,"important fragile"
       """
     Then the response status code should be 201
     And the JSON should match:
@@ -1232,6 +1233,35 @@ Feature: Tasks
         "name":@string@,
         "tasks":[
           "@string@.matchRegex('#/api/tasks/[0-9]+#')",
+          "@string@.matchRegex('#/api/tasks/[0-9]+#')"
+        ]
+      }
+      """
+    And all the tasks should belong to organization with name "Acme"
+
+  Scenario: Import tasks with CSV format (one line)
+    Given the fixtures files are loaded:
+      | sylius_channels.yml |
+      | stores.yml          |
+      | tags.yml            |
+    Given the store with name "Acme" has an OAuth client named "Acme"
+    And the OAuth client with name "Acme" has an access token
+    When I add "Content-Type" header equal to "text/csv"
+    And I add "Accept" header equal to "application/ld+json"
+    And the OAuth client "Acme" sends a "POST" request to "/api/tasks/import" with body:
+      """
+      type,address.streetAddress,address.telephone,address.name,after,before,tags
+      pickup,"1, rue de Rivoli Paris",,Foo,2018-02-15 09:00,2018-02-15 10:00,"important"
+      """
+    Then the response status code should be 201
+    And the JSON should match:
+      """
+      {
+        "@context":"/api/contexts/TaskGroup",
+        "@id":"/api/task_groups/1",
+        "@type":"TaskGroup",
+        "name":@string@,
+        "tasks":[
           "@string@.matchRegex('#/api/tasks/[0-9]+#')"
         ]
       }

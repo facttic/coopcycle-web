@@ -21,6 +21,8 @@ class Settings
     private $keys = [
         'brand_name',
         'stripe_publishable_key',
+        'payment_gateway',
+        'mercadopago_publishable_key',
         'google_api_key',
         'latlng',
         'currency_code',

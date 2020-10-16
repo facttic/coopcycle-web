@@ -249,6 +249,7 @@ stores.settings: Impostazioni
 task.form.finish.FAIL.info: Il compito non può essere completato
 task.status.todo: Da svolgere
 form.local_business.stripe_account.title: Account stripe
+form.local_business.mercadopago_account.title: Account MercadoPago
 meta.title: Piattaforme di consegne per lavoratori indipendenti
 form.task.status.label: Stato
 form.menu_editor.products.help: Per aggiungere prodotti all'elenco a destra, aggiungili
@@ -757,6 +758,7 @@ allergens.SESAME_SEEDS: Olio di sesamo
 allergens.LUPIN: Lupini
 allergens.MOLLUSCS: Molluschi
 form.local_business.iso_code.fr.rcs_number: Numero RCS
+form.local_business.iso_code.ar.cuit: Numero CUIT/CUIL
 receipt.line_item.name: Prodotto
 receipt.line_item.unit_price: Prezzo unitario
 receipt.line_item.quantity: Quantità
@@ -833,6 +835,7 @@ restaurant.menus.noMenus: Non hai creato ancora nessun menu al momento.
 restaurant.menus.activated: Il menù « %menu_name% » è stato attivato. Verrà ora mostrato
   sulla pagina del ristorante
 restaurant.list.orders: Ordini
+restaurant.list.refunds: Rimborsi
 restaurant.list.products: Prodotti
 restaurant.list.product_options: Opzioni
 restaurant.list.menus: Menù

@@ -84,7 +84,7 @@ use Sylius\Component\Taxation\Model\TaxRateInterface;
  *   itemOperations={
  *     "get"={
  *       "method"="GET",
- *       "access_control"="is_granted('ROLE_ADMIN') or (is_granted('ROLE_RESTAURANT') and user.ownsRestaurant(object.getRestaurant())) or (object.getCustomer().hasUser() and object.getCustomer().getUser() == user)"
+ *       "access_control"="is_granted('view', object)"
  *     },
  *     "pay"={
  *       "method"="PUT",
@@ -99,7 +99,7 @@ use Sylius\Component\Taxation\Model\TaxRateInterface;
  *       "method"="PUT",
  *       "path"="/orders/{id}/accept",
  *       "controller"=OrderAccept::class,
- *       "access_control"="is_granted('ROLE_RESTAURANT') and user.ownsRestaurant(object.getRestaurant())",
+ *       "security"="is_granted('accept', object)",
  *       "deserialize"=false,
  *       "swagger_context"={
  *         "summary"="Accepts a Order resource."
@@ -109,7 +109,7 @@ use Sylius\Component\Taxation\Model\TaxRateInterface;
  *       "method"="PUT",
  *       "path"="/orders/{id}/refuse",
  *       "controller"=OrderRefuse::class,
- *       "access_control"="is_granted('ROLE_RESTAURANT') and user.ownsRestaurant(object.getRestaurant())",
+ *       "security"="is_granted('refuse', object)",
  *       "swagger_context"={
  *         "summary"="Refuses a Order resource."
  *       }
@@ -118,7 +118,7 @@ use Sylius\Component\Taxation\Model\TaxRateInterface;
  *       "method"="PUT",
  *       "path"="/orders/{id}/delay",
  *       "controller"=OrderDelay::class,
- *       "access_control"="is_granted('ROLE_RESTAURANT') and user.ownsRestaurant(object.getRestaurant())",
+ *       "security"="is_granted('delay', object)",
  *       "swagger_context"={
  *         "summary"="Delays a Order resource."
  *       }
@@ -127,7 +127,7 @@ use Sylius\Component\Taxation\Model\TaxRateInterface;
  *       "method"="PUT",
  *       "path"="/orders/{id}/fulfill",
  *       "controller"=OrderFulfill::class,
- *       "access_control"="is_granted('ROLE_RESTAURANT') and user.ownsRestaurant(object.getRestaurant())",
+ *       "security"="is_granted('fulfill', object)",
  *       "swagger_context"={
  *         "summary"="Fulfills a Order resource."
  *       }
@@ -136,7 +136,7 @@ use Sylius\Component\Taxation\Model\TaxRateInterface;
  *       "method"="PUT",
  *       "path"="/orders/{id}/cancel",
  *       "controller"=OrderCancel::class,
- *       "access_control"="is_granted('ROLE_RESTAURANT') and user.ownsRestaurant(object.getRestaurant())",
+ *       "security"="is_granted('cancel', object)",
  *       "swagger_context"={
  *         "summary"="Cancels a Order resource."
  *       }
@@ -154,7 +154,7 @@ use Sylius\Component\Taxation\Model\TaxRateInterface;
  *     "get_cart_timing"={
  *       "method"="GET",
  *       "path"="/orders/{id}/timing",
- *       "access_control"="object.getCustomer().hasUser() and object.getCustomer().getUser() == user",
+ *       "access_control"="(object.getCustomer() != null and object.getCustomer().hasUser() and object.getCustomer().getUser() == user) or (cart_session.cart != null and cart_session.cart.getId() == object.getId())",
  *       "swagger_context"={
  *         "summary"="Retrieves timing information about a Order resource.",
  *         "responses"={
@@ -169,7 +169,7 @@ use Sylius\Component\Taxation\Model\TaxRateInterface;
  *       "method"="GET",
  *       "path"="/orders/{id}/validate",
  *       "normalization_context"={"groups"={"cart"}},
- *       "access_control"="object.getCustomer().hasUser() and object.getCustomer().getUser() == user"
+ *       "access_control"="(object.getCustomer() != null and object.getCustomer().hasUser() and object.getCustomer().getUser() == user) or (cart_session.cart != null and cart_session.cart.getId() == object.getId())"
  *     },
  *     "put_cart"={
  *       "method"="PUT",
@@ -954,5 +954,17 @@ class Order extends BaseOrder implements OrderInterface
         }
 
         return $this->customer->getUser();
+    }
+
+    public function getTarget(): ?OrderTarget
+    {
+        if (null !== $this->restaurant) {
+            $target = new OrderTarget();
+            $target->setRestaurant($this->restaurant);
+
+            return $target;
+        }
+
+        return null;
     }
 }

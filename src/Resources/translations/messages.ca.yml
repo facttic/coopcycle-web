@@ -163,6 +163,7 @@ restaurant.closingForm.reason.label: Raó
 restaurant.closingForm.dates.label: Tancar de / a
 restaurant.list.manage: Gestiona
 restaurant.list.orders: Comandes
+restaurant.list.refunds: Devolucions
 restaurant.list.products: Productes
 restaurant.list.product_options: Opcions
 restaurant.list.menus: Menús
@@ -429,6 +430,7 @@ form.registration.username.help: "El vostre nom d’usuari no pot ser superior a
   \ caràcters. Un nom d'usuari només pot contenir caràcters alfanumèrics (lletres\
   \ A-Z, números 0-9) a excepció dels guions baixos.\n"
 form.local_business.stripe_account.title: Compte de Stripe
+form.local_business.mercadopago_account.title: Compte de MercadoPago
 form.local_business.stripe_account.help: Connecteu un compte Stripe per transferir
   diners a un altre compte bancari
 form.local_business.stripe_account.connect_button.text: Connecta amb Stripe
@@ -777,6 +779,7 @@ form.min_max.upper.label: Número màxim
 form.local_business.iso_code.fr.siret: Número SIRET
 form.local_business.iso_code.fr.vat_number: Número IVA
 form.local_business.iso_code.fr.rcs_number: Número RCS
+form.local_business.iso_code.ar.cuit: Número CUIT/CUIL
 receipt.title: 'Rebut de la comanda #%number%'
 receipt.line_item.name: Producte
 receipt.line_item.unit_price: preu d'unitat

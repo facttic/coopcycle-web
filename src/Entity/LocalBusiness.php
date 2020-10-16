@@ -9,27 +9,28 @@ use AppBundle\Action\Restaurant\Close as CloseController;
 use AppBundle\Action\Restaurant\Menu;
 use AppBundle\Action\Restaurant\Deliveries as RestaurantDeliveriesController;
 use AppBundle\Action\Restaurant\Menus;
+use AppBundle\Action\Restaurant\Orders;
 use AppBundle\Action\Restaurant\Timing;
 use AppBundle\Annotation\Enabled;
 use AppBundle\Api\Dto\RestaurantInput;
 use AppBundle\Entity\Base\LocalBusiness as BaseLocalBusiness;
 use AppBundle\Entity\LocalBusiness\CatalogInterface;
 use AppBundle\Entity\LocalBusiness\CatalogTrait;
+use AppBundle\Entity\LocalBusiness\ClosingRulesTrait;
 use AppBundle\Entity\LocalBusiness\FoodEstablishmentTrait;
 use AppBundle\Entity\LocalBusiness\FulfillmentMethod;
+use AppBundle\Entity\LocalBusiness\FulfillmentMethodsTrait;
 use AppBundle\Entity\LocalBusiness\ImageTrait;
+use AppBundle\Entity\LocalBusiness\ShippingOptionsInterface;
+use AppBundle\Entity\LocalBusiness\ShippingOptionsTrait;
 use AppBundle\Entity\Model\OrganizationAwareInterface;
 use AppBundle\Entity\Model\OrganizationAwareTrait;
 use AppBundle\Enum\FoodEstablishment;
 use AppBundle\Enum\Store;
-use AppBundle\Form\Type\AsapChoiceLoader;
-use AppBundle\Form\Type\TimeSlotChoiceLoader;
 use AppBundle\LoopEat\OAuthCredentialsTrait as LoopEatOAuthCredentialsTrait;
 use AppBundle\OpeningHours\OpenCloseInterface;
 use AppBundle\OpeningHours\OpenCloseTrait;
 use AppBundle\Sylius\Product\ProductInterface;
-use AppBundle\Utils\OpeningHoursSpecification;
-use AppBundle\Utils\TimeRange;
 use AppBundle\Validator\Constraints\IsActivableRestaurant as AssertIsActivableRestaurant;
 use Carbon\Carbon;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -52,7 +53,7 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
  *     "get"={
  *       "method"="GET",
  *       "pagination_enabled"=false,
- *       "normalization_context"={"groups"={"restaurant", "restaurant_legacy", "address", "order"}}
+ *       "normalization_context"={"groups"={"restaurant", "address", "order"}}
  *     },
  *     "me_restaurants"={
  *       "method"="GET",
@@ -101,11 +102,12 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
  *       "path"="/restaurants/{id}/timing",
  *       "controller"=Timing::class,
  *       "normalization_context"={"groups"={"restaurant_timing"}}
- *     }
- *   },
- *   subresourceOperations={
- *     "orders_get_subresource"={
- *       "security"="is_granted('ROLE_ADMIN') or (is_granted('ROLE_RESTAURANT') and user.ownsRestaurant(object))"
+ *     },
+ *     "restaurant_orders"={
+ *       "method"="GET",
+ *       "path"="/restaurants/{id}/orders",
+ *       "controller"=Orders::class,
+ *       "access_control"="is_granted('ROLE_ADMIN') or (is_granted('ROLE_RESTAURANT') and user.ownsRestaurant(object))"
  *     }
  *   }
  * )
@@ -113,7 +115,11 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
  * @AssertIsActivableRestaurant(groups="activable")
  * @Enabled
  */
-class LocalBusiness extends BaseLocalBusiness implements CatalogInterface, OpenCloseInterface, OrganizationAwareInterface
+class LocalBusiness extends BaseLocalBusiness implements
+    CatalogInterface,
+    OpenCloseInterface,
+    OrganizationAwareInterface,
+    ShippingOptionsInterface
 {
     use Timestampable;
     use SoftDeleteableEntity;
@@ -123,6 +129,9 @@ class LocalBusiness extends BaseLocalBusiness implements CatalogInterface, OpenC
     use ImageTrait;
     use OpenCloseTrait;
     use OrganizationAwareTrait;
+    use ClosingRulesTrait;
+    use FulfillmentMethodsTrait;
+    use ShippingOptionsTrait;
 
     /**
      * @var int
@@ -175,17 +184,6 @@ class LocalBusiness extends BaseLocalBusiness implements CatalogInterface, OpenC
 
     protected $loopeatEnabled = false;
 
-    /**
-     * @var integer Additional time to delay ordering
-     */
-    protected $orderingDelayMinutes = 0;
-
-    /**
-     * @Assert\GreaterThan(1)
-     * @Assert\LessThanOrEqual(6)
-     */
-    protected $shippingOptionsDays = 2;
-
     protected $pledge;
 
     /**
@@ -215,11 +213,6 @@ class LocalBusiness extends BaseLocalBusiness implements CatalogInterface, OpenC
      * @Assert\Type(type="string")
      */
     protected $deliveryPerimeterExpression = 'distance < 3000';
-
-    /**
-     * @Groups({"restaurant"})
-     */
-    protected $closingRules;
 
     protected $owners;
 
@@ -254,11 +247,6 @@ class LocalBusiness extends BaseLocalBusiness implements CatalogInterface, OpenC
 
     /**
      * @Groups({"restaurant"})
-     * @Assert\Valid()
-     */
-    protected $fulfillmentMethods;
-    /**
-     * @Groups({"restaurant"})
      */
     protected $isAvailableForB2b;
 
@@ -272,7 +260,6 @@ class LocalBusiness extends BaseLocalBusiness implements CatalogInterface, OpenC
         $this->products = new ArrayCollection();
         $this->productOptions = new ArrayCollection();
         $this->taxons = new ArrayCollection();
-        $this->orders = new ArrayCollection();
         $this->stripeAccounts = new ArrayCollection();
         $this->preparationTimeRules = new ArrayCollection();
         $this->reusablePackagings = new ArrayCollection();
@@ -391,70 +378,6 @@ class LocalBusiness extends BaseLocalBusiness implements CatalogInterface, OpenC
     }
 
     /**
-     * @return mixed
-     */
-    public function getClosingRules()
-    {
-        return $this->closingRules;
-    }
-
-    /**
-     * @param ClosingRule $closingRule
-     */
-    public function addClosingRule(ClosingRule $closingRule)
-    {
-        $this->closingRules->add($closingRule);
-    }
-
-    /**
-     * @SerializedName("availabilities")
-     * @Groups({"restaurant_legacy"})
-     * @deprecated
-     * @param \DateTime|null $now
-     * @return array
-     */
-    public function getAvailabilities(\DateTime $now = null)
-    {
-        if (!$this->isFulfillmentMethodEnabled('delivery')) {
-            return [];
-        }
-
-        $fulfillmentMethod = $this->getFulfillmentMethod('delivery');
-
-        if ($fulfillmentMethod->getOpeningHoursBehavior() === 'time_slot') {
-
-            $choiceLoader = new TimeSlotChoiceLoader(
-                TimeSlot::fromLocalBusiness($this, $fulfillmentMethod), 'en');
-
-            $choiceList = $choiceLoader->loadChoiceList();
-
-            $availabilities = [];
-            foreach ($choiceList->getChoices() as $choice) {
-
-                $range = $choice->toTsRange();
-
-                $availabilities[] = Carbon::instance($range->getLower())
-                    ->average($range->getUpper())
-                    ->format(\DateTime::ATOM);
-            }
-
-            return $availabilities;
-        }
-
-        $choiceLoader = new AsapChoiceLoader(
-            $this->getOpeningHours(/* $fulfillmentMethod */),
-            $this->getClosingRules(),
-            $this->getShippingOptionsDays(),
-            $this->getOrderingDelayMinutes(),
-            $now
-        );
-
-        $choiceList = $choiceLoader->loadChoiceList();
-
-        return $choiceList->getValues();
-    }
-
-    /**
      * @return bool
      */
     public function isAvailableForB2b(): bool
@@ -511,38 +434,6 @@ class LocalBusiness extends BaseLocalBusiness implements CatalogInterface, OpenC
     }
 
     /**
-     * @return int
-     */
-    public function getOrderingDelayMinutes()
-    {
-        return $this->orderingDelayMinutes;
-    }
-
-    /**
-     * @param int $orderingDelayMinutes
-     */
-    public function setOrderingDelayMinutes(int $orderingDelayMinutes)
-    {
-        $this->orderingDelayMinutes = $orderingDelayMinutes;
-    }
-
-    /**
-     * @return int
-     */
-    public function getShippingOptionsDays()
-    {
-        return $this->shippingOptionsDays;
-    }
-
-    /**
-     * @param int $shippingOptionsDays
-     */
-    public function setShippingOptionsDays(int $shippingOptionsDays)
-    {
-        $this->shippingOptionsDays = $shippingOptionsDays;
-    }
-
-    /**
      * @return Contract
      */
     public function getContract()
@@ -556,7 +447,6 @@ class LocalBusiness extends BaseLocalBusiness implements CatalogInterface, OpenC
     public function setContract(Contract $contract)
     {
         $this->contract = $contract;
-        $contract->setRestaurant($this);
     }
 
     public function getOwners()
@@ -829,28 +719,6 @@ class LocalBusiness extends BaseLocalBusiness implements CatalogInterface, OpenC
         return FoodEstablishment::class;
     }
 
-    public function getOpeningHoursBehavior($method = 'delivery')
-    {
-        foreach ($this->getFulfillmentMethods() as $fulfillmentMethod) {
-            if ($method === $fulfillmentMethod->getType()) {
-
-                return $fulfillmentMethod->getOpeningHoursBehavior();
-            }
-        }
-
-        return 'asap';
-    }
-
-    public function setOpeningHoursBehavior($openingHoursBehavior, $method = 'delivery')
-    {
-        foreach ($this->getFulfillmentMethods() as $fulfillmentMethod) {
-            if ($method === $fulfillmentMethod->getType()) {
-
-                return $fulfillmentMethod->setOpeningHoursBehavior($openingHoursBehavior);
-            }
-        }
-    }
-
     public function addPromotion($promotion)
     {
         if (!$this->promotions->contains($promotion)) {
@@ -917,114 +785,6 @@ class LocalBusiness extends BaseLocalBusiness implements CatalogInterface, OpenC
     public function setTakeawayEnabled(bool $takeawayEnabled)
     {
         $this->addFulfillmentMethod('collection', $takeawayEnabled);
-    }
-
-    public function getFulfillmentMethods()
-    {
-        return $this->fulfillmentMethods;
-    }
-
-    public function getFulfillmentMethod(string $method)
-    {
-        foreach ($this->getFulfillmentMethods() as $fulfillmentMethod) {
-            if ($method === $fulfillmentMethod->getType()) {
-
-                return $fulfillmentMethod;
-            }
-        }
-
-        return null;
-    }
-
-    public function addFulfillmentMethod($method, $enabled = true)
-    {
-        $fulfillmentMethod = $this->fulfillmentMethods->filter(function (FulfillmentMethod $fulfillmentMethod) use ($method): bool {
-            return $method === $fulfillmentMethod->getType();
-        })->first();
-
-        if (!$fulfillmentMethod) {
-
-            $fulfillmentMethod = new FulfillmentMethod();
-            $fulfillmentMethod->setRestaurant($this);
-            $fulfillmentMethod->setType($method);
-
-            $this->fulfillmentMethods->add($fulfillmentMethod);
-        }
-
-        $fulfillmentMethod->setEnabled($enabled);
-    }
-
-    public function disableFulfillmentMethod($method)
-    {
-        $fulfillmentMethod = $this->fulfillmentMethods->filter(function (FulfillmentMethod $fulfillmentMethod) use ($method): bool {
-            return $method === $fulfillmentMethod->getType();
-        })->first();
-
-        if ($fulfillmentMethod) {
-
-            $fulfillmentMethod->setEnabled(false);
-        }
-    }
-
-    public function getOpeningHours($method = 'delivery')
-    {
-        foreach ($this->getFulfillmentMethods() as $fulfillmentMethod) {
-            if ($method === $fulfillmentMethod->getType()) {
-
-                return $fulfillmentMethod->getOpeningHours();
-            }
-        }
-
-        return [];
-    }
-
-    public function setOpeningHours($openingHours, $method = 'delivery')
-    {
-        foreach ($this->getFulfillmentMethods() as $fulfillmentMethod) {
-            if ($method === $fulfillmentMethod->getType()) {
-                $fulfillmentMethod->setOpeningHours($openingHours);
-
-                break;
-            }
-        }
-
-        return $this;
-    }
-
-    public function addOpeningHour($openingHour, $method = 'delivery')
-    {
-        foreach ($this->getFulfillmentMethods() as $fulfillmentMethod) {
-            if ($method === $fulfillmentMethod->getType()) {
-                $fulfillmentMethod->addOpeningHour($openingHour);
-
-                break;
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @SerializedName("openingHoursSpecification")
-     * @Groups({"restaurant", "restaurant_seo"})
-     */
-    public function getOpeningHoursSpecification()
-    {
-        return array_map(function (OpeningHoursSpecification $openingHoursSpecification) {
-            return $openingHoursSpecification->jsonSerialize();
-        }, OpeningHoursSpecification::fromOpeningHours($this->getOpeningHours()));
-    }
-
-    public function isFulfillmentMethodEnabled($method)
-    {
-        foreach ($this->getFulfillmentMethods() as $fulfillmentMethod) {
-            if ($method === $fulfillmentMethod->getType()) {
-
-                return $fulfillmentMethod->isEnabled();
-            }
-        }
-
-        return false;
     }
 
     public function setMinimumAmount($method, $amount)

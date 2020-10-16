@@ -250,6 +250,7 @@ restaurant.closingForm.reason.label: Powód
 restaurant.closingForm.dates.label: Zamknięte od/do
 restaurant.list.manage: Zarządzaj
 restaurant.list.orders: Zamówienia
+restaurant.list.refunds: Zwroty kosztów
 restaurant.list.products: Produkty
 restaurant.list.product_options: Opcje
 restaurant.list.menus: Lista menu
@@ -496,6 +497,7 @@ form.local_business.stripe_account.link_ok: "Ta restauracja jest połączona z k
   \ Stripe i może otrzymywać płatności z platformy <br>\nAby zarządzać kontem Stripe\
   \ i przelewami do twojego konta, proszę skorzystaj z<a href=\"https://dashboard.stripe.com/\"\
   \ target=\"_blank\">pulpitu nawigacyjnego Stripe</a>.\n"
+form.local_business.mercadopago_account.title: Konto MercadoPago
 form.product_option.values.title: Cechy
 form.product_option.values.help: Musisz określić listę cech dla tej opcji
 form.product_option.additional.label: Ta opcja jest dodatkowa
@@ -770,6 +772,7 @@ receipt.title: 'Paragon twojego zamówienia #%number%'
 form.local_business.iso_code.fr.rcs_number: Numer RCS
 form.local_business.iso_code.fr.vat_number: Numer VAT
 form.local_business.iso_code.fr.siret: Numer SIRET
+form.local_business.iso_code.ar.cuit: Numer CUIT/CUIL
 form.min_max.infinity.label: Brak maksimum
 form.min_max.upper.label: Max. numer
 form.min_max.lower.label: Min. numer

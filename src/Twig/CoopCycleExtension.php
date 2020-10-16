@@ -48,6 +48,8 @@ class CoopCycleExtension extends AbstractExtension
             new TwigFilter('time_range_for_humans', array(OrderRuntime::class, 'timeRangeForHumans')),
             new TwigFilter('promotion_rule_for_humans', array(PromotionRuntime::class, 'ruleForHumans')),
             new TwigFilter('get_iri_from_item', array($this, 'getIriFromItem')),
+            new TwigFilter('oauth2_proxy', array(OAuthRuntime::class, 'modifyUrl')),
+            new TwigFilter('restaurant_microdata', array(LocalBusinessRuntime::class, 'seo'))
         );
     }
 
@@ -133,9 +135,9 @@ class CoopCycleExtension extends AbstractExtension
         return strtolower($carbon->locale($locale)->calendar());
     }
 
-    public function hashid(object $object)
+    public function hashid(object $object, $minHashLength = 8)
     {
-        $hashids = new Hashids($this->secret, 8);
+        $hashids = new Hashids($this->secret, $minHashLength ?? 8);
 
         if (is_callable([$object, 'getId'])) {
             $id = $object->getId();

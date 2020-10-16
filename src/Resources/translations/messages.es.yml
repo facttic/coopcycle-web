@@ -144,6 +144,7 @@ restaurant.closingForm.reason.label: Razón
 restaurant.closingForm.dates.label: Cerrado de/hasta
 restaurant.list.manage: Gestionar
 restaurant.list.orders: Pedidos
+restaurant.list.refunds: Devoluciones
 restaurant.list.products: Productos
 restaurant.list.product_options: Opciones
 restaurant.list.menus: Cartas
@@ -201,6 +202,10 @@ order.total_tax: IVA
 order.total_tax_by_rate: Total %name%
 order.preparation_expected_at: Preparación esperada a las %date%
 order.shipping_date.title: Tu horario de entrega
+order.payer.title: Detalles del comprador
+order.payer.email: E-mail
+order.payer.identificationType: Tipo de documento
+order.payer.identificationNumber: Número de documento
 order.payment.title: Información de tú pago
 order.payment.expiration.label: Caducidad
 order.payment.month.label: Mes
@@ -268,6 +273,7 @@ cart.widget.title: Tus detalles de entrega
 cart.widget.button: Pedir
 checkout.breadcrumb.address: Dirección
 checkout.breadcrumb.payment: Pago
+checkout.breadcrumb.confirm: Confirmación
 form.geojson_upload.file: Archivo
 form.store_type.pricing_rule_set.label: Tarifa
 form.store_type.prefill_pickup_address.label: Rellenar automáticamente la dirección
@@ -298,7 +304,10 @@ form.order.fulfill.label: Realizar
 form.order.payment_complete.label: Completar
 form.order.payment_refund.label: Reembolsar
 form.order.refund_modal.title: Reembolso
-form.payment.refund_amount.label: Suma
+form.payment.state.label: Estado
+form.payment.amount.label: Monto
+form.payment.refund_amount.label: Monto de reembolso
+form.payment.last_update.label: Ultima actualización
 form.payment.refund_amount.help: El importe que especifique será devuelto al cliente
 form.address.streetAddress.label: Dirección
 form.address.streetAddress.error.noLatLng: Selecciona una dirección en el menú desplegable
@@ -388,6 +397,27 @@ form.local_business.stripe_account.link_ok: "Éste restaurante ha sido enlazado 
   \ cuenta Stripe y puede recibir pagos de la plataforma.<br>\nPara gestionar tu cuenta\
   \ Stripe por favor usa el <a href=\"https://dashboard.stripe.com/\" target=\"_blank\"\
   >panel de administración de Stripe</a>.\n"
+form.settings.mercadopago.title: Mercado Pago
+form.local_business.mercadopago_account.title: Cuenta de MercadoPago
+form.local_business.mercadopago_account.success: Cuenta MercadoPago conectada con éxito
+form.local_business.mercadopago.connect_button.text: 'Conectar con Mercadopago'
+form.mercadopago_livemode.enable.label: Utilizar Mercadopago en modo « producción »
+form.mercadopago_livemode.enable.alert: En modo « producción », las tarjetas de crédito serán cargadas.
+form.mercadopago_livemode.disable.label: Utilizar Mercadopago en modo « test »
+form.mercadopago_livemode.disable.alert: En modo « test », las tarjetas de crédito no serán cargadas.
+form.mercadopago_livemode.disable_and_enable_maintenance.label: Utilizar el modo « test » y activar el mantenimiento
+form.mercadopago_livemode.disable_and_enable_maintenance.alert: Estás utilizando el modo « live ».<br>Si quiere pasar en modo « test », el mantenimiento se activará automáticamente.
+form.settings.mercadopago_testmode.help: 'En modo « test », debe usar <a href="https://www.mercadopago.com.ar/developers/es/guides/online-payments/checkout-api/testing#bookmark_tarjetas_de_prueba">números de tarjetas de prueba</a> para pagar. <strong>No se intercambiará dinero.</strong> '
+form.settings.mercadopago_enable_livemode.help: Para activar el modo « live », primero necesita configurar las credenciales « live ».
+form.settings.mercadopago.publishable_key.label: Clave de publicación
+form.settings.mercadopago.publishable_key.help: "Obtenga la <a href=\"\
+  https://www.mercadopago.com.%country%/developers/panel/credentials\" target=\"_blank\">clave de publicación</a>"
+form.settings.mercadopago.access_token.label: Token de acceso
+form.settings.mercadopago.access_token.help: "Obtenga el <a href=\"\
+  https://www.mercadopago.com.%country%/developers/panel/credentials\" target=\"_blank\">token de acceso</a>"
+form.settings.mercadopago.app_id.label: ID de Aplicación
+form.settings.mercadopago.app_id.help: Necesita <a href="https://www.mercadopago.com.br/developers/es/guides/marketplace/api/create-marketplace/">crear una aplicación</a> para obtener su ID de Aplicación.
+form.settings.mercadopago.redirect_uri.help: "Cuando configure su app, use la siguiente URI de redirección: <code>%redirect_uri%</code>"
 form.menu_item.name.label: Nombre
 form.menu_item.price.label: Precio
 form.menu_item_modifier.name.label: Nombre
@@ -900,6 +930,7 @@ form.min_max.infinity.label: Sin máximo
 form.local_business.iso_code.fr.siret: Número SIRET
 form.local_business.iso_code.fr.vat_number: Número IVA
 form.local_business.iso_code.fr.rcs_number: Número RCS
+form.local_business.iso_code.ar.cuit: CUIT/CUIL
 form.delivery_import.file.label: Archivo
 profile.loopeat.connect: Conectar mi cuenta de LoopEat
 profile.loopeat.connected: Cuenta de LoopEat conectada
@@ -915,6 +946,7 @@ basics.no: No
 notifications.messenger_approaching: Hey %customer%! Nuestro mensajero %messenger%
   está casi contigo. Prepárate!
 order.export.heading.order_number: Número de pedido
+order.export.heading.fulfillment_method: Cumplimiento
 order.export.heading.completed_at: Completado en
 order.export.heading.delivery_fee: Gastos de envío
 order.export.heading.tip: Propina
@@ -971,3 +1003,12 @@ form.pricing_rule_set.strategy.help: Las reglas se evalúan de arriba a abajo. D
   el precio, o bien el precio se calculará sumando todas las reglas que coinciden.
 form.pricing_rule_set.strategy.find.label: La primera regla que coincide
 form.pricing_rule_set.strategy.map.label: Todas las reglas que coinciden
+refund.list.debit_total: Importe total adeudado por la plataforma a la empresa
+refund.list.refunded_at: Devuelto en
+refund.list.liable_party: Parte responsable
+refund.list.amount: Monto devuelto
+refund.list.comments: Comentarios
+authentication.register_benefits: Crea una cuenta para pedir más rápidamente. También podrás recuperar el historial de tus pedidos anteriores.
+form.checkout_address.telephone.help: Para contactar contigo en caso de un problema
+guest_checkout.user_with_same_email_exists: Ya existe una cuenta con el mismo correo electrónico. Por favor, inicia sesión para continuar, o usa otro correo electrónico para hacer un pedido sin crear una cuenta.
+guest_checkout.use_another_email: Usar otro correo electrónico
