@@ -3,7 +3,8 @@
 namespace Tests\AppBundle\Utils;
 
 use AppBundle\Entity\LocalBusiness\FulfillmentMethod;
-use AppBundle\Entity\Restaurant;
+use AppBundle\Entity\LocalBusiness;
+use AppBundle\Entity\Sylius\OrderTarget;
 use AppBundle\Sylius\Order\OrderInterface;
 use AppBundle\Utils\OrderTimeHelper;
 use AppBundle\Utils\PreparationTimeCalculator;
@@ -41,30 +42,11 @@ class OrderTimeHelperTest extends TestCase
         Carbon::setTestNow();
     }
 
-    private function createOrder($total, $shippedAt)
-    {
-        $restaurant = new Restaurant();
-        $restaurant->setState($state);
-
-        $order = $this->prophesize(OrderInterface::class);
-        $order
-            ->getRestaurant()
-            ->willReturn($restaurant);
-        $order
-            ->getItemsTotal()
-            ->willReturn($total);
-        $order
-            ->getShippedAt()
-            ->willReturn(new \DateTime($shippedAt));
-
-        return $order->reveal();
-    }
-
     public function testAsapWithSameDayShippingChoices()
     {
         Carbon::setTestNow(Carbon::parse('2020-03-31T14:25:00+02:00'));
 
-        $restaurant = $this->prophesize(Restaurant::class);
+        $restaurant = $this->prophesize(LocalBusiness::class);
 
         $sameDayChoices = [
             '2020-03-31T14:30:00+02:00',
@@ -75,6 +57,11 @@ class OrderTimeHelperTest extends TestCase
         $cart
             ->getRestaurant()
             ->willReturn($restaurant->reveal());
+        $cart
+            ->getTarget()
+            ->willReturn(
+                OrderTarget::withRestaurant($restaurant->reveal())
+            );
         $cart
             ->getFulfillmentMethod()
             ->willReturn('delivery');

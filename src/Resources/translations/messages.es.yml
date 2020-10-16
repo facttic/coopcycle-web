@@ -287,6 +287,7 @@ cart.widget.title: Tus detalles de entrega
 cart.widget.button: Pedir
 checkout.breadcrumb.address: Dirección
 checkout.breadcrumb.payment: Pago
+checkout.breadcrumb.confirm: Confirmación
 form.geojson_upload.file: Archivo
 form.store_type.pricing_rule_set.label: Tarifa
 form.store_type.prefill_pickup_address.label: Rellenar automáticamente la dirección
@@ -1024,3 +1025,7 @@ refund.list.refunded_at: Devuelto en
 refund.list.liable_party: Parte responsable
 refund.list.amount: Monto devuelto
 refund.list.comments: Comentarios
+authentication.register_benefits: Crea una cuenta para pedir más rápidamente. También podrás recuperar el historial de tus pedidos anteriores.
+form.checkout_address.telephone.help: Para contactar contigo en caso de un problema
+guest_checkout.user_with_same_email_exists: Ya existe una cuenta con el mismo correo electrónico. Por favor, inicia sesión para continuar, o usa otro correo electrónico para hacer un pedido sin crear una cuenta.
+guest_checkout.use_another_email: Usar otro correo electrónico

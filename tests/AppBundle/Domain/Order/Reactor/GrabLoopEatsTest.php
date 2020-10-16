@@ -4,8 +4,9 @@ namespace Tests\AppBundle\Domain\Order\Reactor;
 
 use AppBundle\Domain\Order\Event\OrderPicked;
 use AppBundle\Domain\Order\Reactor\GrabLoopEats;
-use AppBundle\Entity\ApiUser;
+use AppBundle\Entity\User;
 use AppBundle\Entity\Restaurant;
+use AppBundle\Entity\Sylius\Customer;
 use AppBundle\Entity\Sylius\Order;
 use AppBundle\LoopEat\Client as LoopEatClient;
 use AppBundle\Sylius\Order\OrderInterface;
@@ -107,7 +108,10 @@ class GrabLoopEatsTest extends TestCase
         $restaurant = new Restaurant();
         $restaurant->setLoopeatEnabled(true);
 
-        $customer = new ApiUser();
+        $user = new User();
+
+        $customer = new Customer();
+        $customer->setUser($user);
 
         $order = $this->prophesize(Order::class);
         $order
@@ -133,6 +137,44 @@ class GrabLoopEatsTest extends TestCase
         $this->loopeat
             ->grab($customer, $restaurant, 2)
             ->shouldBeCalled();
+
+        call_user_func_array($this->grabLoopEats, [ new OrderPicked($order->reveal()) ]);
+    }
+
+    public function testGrabWithGuestCheckout()
+    {
+        $restaurant = new Restaurant();
+        $restaurant->setLoopeatEnabled(true);
+
+        $customer = $this->prophesize(Customer::class);
+        $customer->hasUser()->willReturn(false);
+
+        $order = $this->prophesize(Order::class);
+        $order
+            ->getRestaurant()
+            ->willReturn($restaurant);
+        $order
+            ->isReusablePackagingEnabled()
+            ->willReturn(true);
+        $order
+            ->getReusablePackagingQuantity()
+            ->willReturn(2);
+        $order
+            ->getReusablePackagingPledgeReturn()
+            ->willReturn(0);
+        $order
+            ->getCustomer()
+            ->willReturn($customer->reveal());
+
+        $this->loopeat
+            ->return($customer->reveal(), 0)
+            ->shouldBeCalled();
+
+        $this->loopeat
+            ->grab($customer->reveal(), $restaurant, 2)
+            ->shouldBeCalled();
+
+        $customer->clearLoopEatCredentials()->shouldBeCalled();
 
         call_user_func_array($this->grabLoopEats, [ new OrderPicked($order->reveal()) ]);
     }

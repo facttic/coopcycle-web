@@ -1,6 +1,8 @@
 global.changesSaved: Changements sauvegardés.
 navbar.login: Connexion
 navbar.myAccount: Mon compte
+navbar.proCart: Passer en pro
+navbar.lambdaCart: Passer en normal
 base.footer.contactUs: Nous contacter
 base.footer.companyRegister: Devenir partenaire
 base.footer.RegisterMyRestaurant: Inscrire mon restaurant
@@ -141,8 +143,8 @@ restaurant.form.noPricingRule: Aucune règle de tarification n'a été instauré
 restaurant.form.allow_stripe_connect.label: Autoriser le restaurant à gérer lui-même
   son compte Stripe
 restaurant.form.deposit_refund_enabled.label: Activer le système de consignes
-restaurant.form.temporaryClosingRule: Si vous souhaitez fermer temporairement votre
-  restaurant
+restaurant.form.temporaryClosingRule: Cliquez ici pour fermer temporairement votre
+  restaurant.
 restaurant.form.accessPlanning: Accéder au planning
 restaurant.form.createRestaurant: Créer un restaurant
 restaurant.form.exclusive.label: Ce restaurant est une exclusivité
@@ -275,6 +277,7 @@ profile.email: Email
 profile.telephone: Numéro de téléphone
 profile.familyName: Nom
 profile.givenName: Prénom
+profile.fullName: Nom complet
 profile.managedStores: Magasins gérés par l'utilisateur
 profile.managedRestaurants: Restaurants gérés par l'utilisateur
 profile.accountType: Type de compte
@@ -299,7 +302,7 @@ order.payment.card_number.label: Numéro de carte
 order.payment.total: Payer %total%
 order.payment.card_number.help: 'Un <a href="https://stripe.com/docs/testing#cards"
   target="_blank" tabindex="-1">numéro de test</a> Stripe est pré-rempli. Aucun compte
-  ne sera débité. '
+  ne sera débité.'
 order.payment.cvc: CVC
 order.payment.redirect.help: Vous serez redirigé·e vers le site Internet de votre
   banque pour compléter la transaction
@@ -370,6 +373,7 @@ cart.widget.title: Vos détails de livraison
 cart.widget.button: Commander
 checkout.breadcrumb.address: Adresse
 checkout.breadcrumb.payment: Paiement
+checkout.breadcrumb.confirm: Confirmation
 form.geojson_upload.file: Fichier
 form.store_type.pricing_rule_set.label: Tarification
 form.store_type.prefill_pickup_address.label: Remplir automatiquement l'adresse de
@@ -390,7 +394,7 @@ form.delivery.dropoff.label: Dépôt
 form.delivery.dropoff.address_placeholder: Entrez l'adresse de dépôt
 form.delivery.weight.label: Poids
 form.delivery.weight.help: Veuillez indiquer le poids en grammes (1kg = 1000g)
-form.delivery.vehicle.label: Type de véhicule
+form.delivery.vehicle.label: Vélo classique, ou vélo cargo ?
 form.delivery.pickup.doneBefore.label: Heure de retrait
 form.delivery.dropoff.doneBefore.label: Heure de dépôt
 form.delivery.distance.label: Distance
@@ -421,7 +425,7 @@ form.delivery_embed.name.label: Nom
 form.delivery_embed.name.help: Votre nom ou le nom de l'entreprise
 form.delivery_embed.telephone.label: Numéro de téléphone
 form.delivery_embed.vehicle.disclaimer: Nous livrons en vélo cargo les objets de plus
-  de 50x40x20 (cm) ou dont le poids excède 6kg
+  de 50x40x20 (cm) ou dont le poids excède 6kg.
 form.address.streetAddress.label: Adresse
 form.address.streetAddress.error.noLatLng: Veuillez sélectionner une adresse dans
   la liste déroulante
@@ -433,7 +437,8 @@ form.address.description.label: Instructions
 form.address.description.placeholder: 2ème porte à gauche…
 form.address.company.label: Entreprise
 form.address.company_name.label: Nom de l'entreprise
-form.address.company.business_reference.label: Contact de la personne référente pour l’entreprise
+form.address.company.business_reference.label: Contact de la personne référente pour
+  l’entreprise
 form.address.company.function.label: Poste
 form.address.company.collaborator_number.label: Nombre de collaborateur-ices
 form.address.company.meal_estimate.label: Estimation du nombre de repas (par jour)
@@ -561,7 +566,7 @@ form.menu_editor.help: "Utilisez l'éditeur ci-dessous pour composer les élemen
   \ de la vente, déposez-le dans la section « Produits » à droite\n<br>\nN'oubliez\
   \ pas de cliquer sur le bouton « Enregistrer les modifications » ci-dessous\n"
 form.menu_editor.products.help: "Pour ajouter des produits dans la liste de droite,\
-  \ ajoutez-les d'abord au <a href=\"%products_url%\">catalogue</a>\n"
+  \ ajoutez-les d'abord au <a href=\"%products_url%\">catalogue</a>"
 form.menu_editor.taxon_modal.title: Modifier une section
 form.product.name.label: Nom
 form.product.description.label: Description
@@ -578,7 +583,7 @@ form.product.confirm.help: "Vous avez modifié le nom du produit. S'il s'agit d'
   \ <strong>modification mineure</strong> (faute d'orthographe, majuscule…), cliquez\
   \ sur « Confirmer la modification ».\n<br>\nDans le cas contraire, vous devez <a\
   \ href=\"%link%\">créer un nouveau produit</a>, afin de pouvoir distinguer les produits\
-  \ vendus et conserver un historique.\n"
+  \ vendus et conserver un historique. "
 form.product.reusable_packaging_enabled.label: Activer les emballages réutilisables
   pour ce produit
 form.product.reusable_packaging.label: Type d'emballage réutilisable
@@ -594,7 +599,7 @@ form.product_option_value.price.label: Prix
 form.product_option.additional.label: Cette option est un supplément
 form.product_option.additional.help: Le client pourra choisir plusieurs valeurs, sans
   être obligé d'en choisir au moins une
-form.checkout_address.notes.label: Une remarque ?
+form.checkout_address.notes.label: Laissez un message pour le restaurant
 form.checkout_address.notes.placeholder: "Exemple : sans sauce, sans tomates…\n"
 form.checkout_address.notes.help: Votre remarque sera transmise au restaurant
 form.checkout_address.promotion_coupon.label: Code promotionnel
@@ -691,7 +696,7 @@ roles.ROLE_ADMIN.help: "Administrateur : Accès total à toutes les fonctions\n"
 roles.ROLE_COURIER.help: "Coursier : visualiser les courses à faire, changer l'état\
   \ des courses qui lui sont assignées…\n"
 roles.ROLE_RESTAURANT.help: "Restaurant : gérer les restaurants qui lui sont assignés,\
-  \ gérer les commandes…\n"
+  \ gérer les commandes…"
 roles.ROLE_STORE.help: 'Magasin : gérer les magasins qui lui sont assignés, créer
   des courses…'
 stores.form.save: Enregistrer
@@ -781,13 +786,13 @@ activity.order.dropped: "@%owner% a livré la commande #order/%aggregate_id%\n"
 activity.order.fulfilled: "La commande #order/%aggregate_id% est terminée\n"
 social.sign_in_with_facebook: Se connecter avec Facebook
 embed.delivery.summary: "Vous avez demandé une course qui vous sera déposée le <strong>%dropoff_date%</strong>\
-  \ à l'adresse suivante : <strong>%dropoff_address%</strong>\n<br>\nNous avons calculé\
-  \ une distance de <strong>%distance% kilomètres</strong>.\n<br>\nSelon nos tarifs,\
+  \ à l'adresse suivante : <strong>%dropoff_address%</strong><br>Nous avons calculé\
+  \ une distance de <strong>%distance% kilomètres</strong>. <br>Selon nos tarifs,\
   \ cette course vous coûtera <strong>%total_excluding_tax% HT</strong> (%total_including_tax%\
   \ TTC). "
 embed.delivery.submit.help: Cliquez pour confirmer le devis et commander la course.
 embed.delivery.confirm_message: "Nous avons bien enregistré votre demande. Votre course\
-  \ est en attente de validation.\n<br>\nNous allons vous envoyer un email d'ici quelques\
+  \ est en attente de validation. Nous allons vous envoyer un email d'ici quelques\
   \ minutes. Vous recevrez un second mail dès que la course est confirmée."
 deliveryForm.noPriceWarning: Le tarif ne peut être calculé. Veuillez intégrer un nouveau
   prix.
@@ -1042,3 +1047,72 @@ refund.list.refunded_at: Remboursé à
 refund.list.liable_party: Partie responsable
 refund.list.amount: Montant du remboursement
 refund.list.comments: Commentaires
+loopeat.oauth_connect.success: Votre compte LoopEat est connecté !
+loopeat.oauth_redirect.warning: Vous allez être redirigé·e vers le site de LoopEat
+  pour vous identifier ou créer votre compte
+authentication.register_benefits: Créez un compte pour commander plus rapidement.
+  Vous pourrez aussi retrouver l'historique de vos commandes précédentes.
+guest_checkout.user_with_same_email_exists: Un compte avec le même email existe déjà.
+  Veuillez vous connecter pour continuer, ou utilisez un autre email pour commander
+  sans créer de compte.
+guest_checkout.use_another_email: Utiliser un autre email
+form.checkout_address.telephone.help: Pour vous contacter en cas de problème
+restaurant.embed.disclaimer: Vous pouvez intégrer le tunnel de commande directement
+  sur votre site. Suivez les instructions ci-dessous pour démarrer.
+restaurant.embed.step_1: 'Ajoutez le script <code>coopcycle.js</code> à votre page'
+restaurant.embed.step_2: "Ajoutez l'attribut <code>data-coopcycle-embed=\"%url%\"\
+  </code> à un élément HTML cliquable"
+restaurant.embed.greeting: C'est tout ! Désormais, quand les visiteurs cliquent sur
+  le bouton, une fenêtre s'ouvre directement sur votre site.
+form.settings.guest_checkout_enabled.label: Autoriser à commander sans créer de compte
+homepage.form.title: Vous avez besoin d'une livraison ?
+homepage.form.content: "<strong>%brand_name%</strong> propose des services locaux\
+  \ et non polluants de livraison à vélo à la demande. Expédiez un colis ponctuellement\
+  \ ou de manière récurrente pour votre entreprise."
+restaurant.form.section.embed: Intégration
+form.attach_to_org.modal.title: Associer au magasin
+basics.kilos: Kilos
+promotion_rule.is_customer: Le client est %username%
+promotion_rule.is_restaurant: Le restaurant est %restaurant%
+food_establishment.BAR_OR_PUB: Bar ou pub
+food_establishment.BAKERY: Boulangerie
+order.export.heading.fulfillment_method: Réalisation
+basics.view_example: Voir un exemple
+form.delivery_import.store.label: Magasin
+form.time_slot.choices.error.empty: La liste de choix ne peut pas être vide
+store.FLORIST: Fleuriste
+order.list.reorder: Commander de nouveau
+search.orders: Rechercher une commande (numéro, email du client…)
+basics.configure: Configurer
+basics.updated_at: Mis à jour le %date%
+basics.description: Description
+basics.import: Importer
+activity.task.started: "@%owner% a démarré la tâche #task/%aggregate_id%\n"
+form.customize.custom_banner.help: Assurez-vous que la bannière est un motif SVG qui
+  se répète
+form.customize.custom_banner.label: Bannière personnalisée
+form.customize.custom_privacy.label: Contenu de la politique de confidentialité personnalisée
+form.customize.custom_privacy_enabled.label: Activer la politique de confidentialité
+  personnalisée
+form.customize.custom_terms.label: Contenu de la page conditions générales personnalisées
+form.customize.custom_terms_enabled.label: Activer les conditions générales personnalisées
+form.customize.custom_legal.label: Contenu de la page mentions légales personnalisées
+form.customize.custom_legal_enabled.label: Activer les mentions légales personnalisées
+form.menu_editor.name.help: C'est uniquement pour vous, pour distinguer les menus.
+  Ce n'est pas affiché au client.
+form.settings.sms_gateway_config.twilio.from.label: Numéro de téléphone Twilio
+form.settings.sms_gateway_config.twilio.auth_token.label: Auth Token Twilio
+form.settings.sms_gateway_config.twilio.sid.label: SID Twillio
+form.settings.sms_gateway_config.mailjet.api_token.label: Token d'API Mailjet
+form.settings.sms_gateway.label: Passerelle SMS
+form.settings.sms.title: SMS
+form.settings.sms_enabled.label: Activer l'envoi de SMS
+form.payment.refund_comment.help: Veuillez décrire ce qu'il s'est passé
+form.payment.refund_comment.label: Commentaires
+form.payment.refund_liable.help: Qui est responsable de l'incident ?
+form.order.refuse.refund.alert: Cette commande a été payée avec une méthode qui ne
+  supporte pas les pré-autorisations. Si vous la refusez, le paiement sera remboursé.
+  Êtes-vous sûr ?
+form.store_type.package_set.placeholder: Choisissez un ensemble de paquets
+form.store_type.time_slot.placeholder: Choisissez une tranche horaire
+order.payment.waiting_failure: Votre banque a décliné le paiement

@@ -20,7 +20,6 @@ adminDashboard.dashboard.exportTasks: Exportovat úkoly
 adminDashboard.dashboard.deleteTaskGroup: Smazat skupinu úloh
 adminDashboard.dashboard.displayByGroups: Zobrazit podle skupin
 adminDashboard.dashboard.displayAll: Zobrazit vše
-adminDashboard.dashboard.cancel: Zrušit
 adminDashboard.deliveries.title: Dodávky
 adminDashboard.deliveries.type: Typ
 adminDashboard.deliveries.dueDate: Datum vypršení
@@ -29,7 +28,6 @@ adminDashboard.deliveries.address: Adresa
 adminDashboard.deliveries.delivery: Dodávka
 adminDashboard.deliveries.originAddress: Původní adresa
 adminDashboard.deliveries.deliveryAddress: Doručovací adresa
-adminDashboard.deliveries.save: Uložit
 adminDashboard.embed.title: Externí obrazovka
 adminDashboard.package_sets.title: Balíčky
 embed.delivery.title: Formulář pro vytvoření dodávky
@@ -51,7 +49,6 @@ embed.delivery.billing_address: Fakturační adresa
 adminDashboard.menuCategories.menu: Nabídka
 adminDashboard.menuCategories.categories: Kategorie
 adminDashboard.menuCategories.addCategory: Přidat kategorii
-adminDashboard.menuCategories.save: Uložit
 adminDashboard.stores.title: Obchody
 adminDashboard.stores.createNew: Vytvořit nový obchod
 adminDashboard.stores.form.uploadImage: Nahrát obrázek
@@ -62,7 +59,6 @@ adminDashboard.restaurants.title: Restaurace
 adminDashboard.restaurants.createNew: Vytvořit novou restauraci
 adminDashboard.restaurants.exclusive: Výhradní
 adminDashboard.users.title: Uživatelé
-adminDashboard.users.edit: Upravit
 adminDashboard.users.roles: Role
 adminDashboard.users.editUser: Upravit uživatele
 adminDashboard.users.edit.addStore: Přidat obchod
@@ -80,7 +76,6 @@ adminDashboard.pricing.noRuleFound: Nebylo nalezeno žádné cenové pravidlo. P
   tvorby cen definují způsob výpočtu nákladů na doručení.
 adminDashboard.pricing.addRule: Přidat pravidlo
 adminDashboard.tags.title: Značky
-adminDashboard.tags.save: Uložit
 adminDashboard.tags.createNew: Vytvořit novou značku
 adminDashboard.tags.name: Název
 adminDashboard.tags.color: Barva
@@ -90,9 +85,6 @@ adminDashboard.tags.confirm_delete: "Opravdu chcete tuto značku smazat?\nZnačk
 adminDashboard.taxation.title: Zdanění
 adminDashboard.taxation.button: Přidat zdanění
 adminDashboard.zones.title: Oblasti
-adminDashboard.zones.cancel: Zrušit
-adminDashboard.zones.save: Uložit
-adminDashboard.zones.delete: Smazat
 adminDashboard.zones.uploadGeoJSON: Nahrát GeoJSON soubor
 adminDashboard.zones.send: Poslat
 adminDashboard.back.title: Zpět na web
@@ -158,7 +150,6 @@ restaurant.form.temporaryClosingRule: Kliknutím sem dočasně deaktivujete obje
 restaurant.form.deposit_refund_enabled.label: Povolit systém vložení a vrácení peněz
 restaurant.form.accessPlanning: Plánování přístupu
 restaurant.form.createRestaurant: Vytvořit restauraci
-restaurant.form.save: Uložit
 restaurant.form.exclusive.label: Tato restaurace je exkluzivní
 restaurant.form.quotes_allowed.label: 'Tato restaurace také přijímá nabídky (např.:
   catering)'
@@ -267,15 +258,12 @@ profile.myOrders: Mé objednávky
 profile.myAddresses: Mé adresy
 profile.myPersonalInfo: Moje osobní údaje
 profile.payment: Způsob platby
-profile.task.cancel: Zrušit
 profile.task.noTasks: Žádné naplánované úkoly
 profile.task.dueDate: Datum splatnosti
 profile.task.address: Adresa
 profile.task.complete: Dokončit
 profile.task.date: Datum
-profile.edit.save: Uložit
 profile.addresses.newAddress: Nová adresa
-profile.addresses.save: Uložit
 profile.addresses.add: Přidat
 profile.editProfile: Upravit profil
 profile.payment.title: Platba
@@ -340,7 +328,6 @@ order.adjustment_type.tip: Spropitné
 order_item.adjustment_type.reusable_packaging: '%quantity% × obal(y)'
 order.list.total: Celkem
 order.list.shippedAt: Čas  doručení
-order.list.cancel: Zrušit
 order.list.type: Typ
 order.list.customer: Zákazník
 order.list.state: Stav
@@ -354,7 +341,6 @@ vehicle.bike: Kolo
 vehicle.cargo_bike: Kolo s nosičem
 task.form.create: Vytvořit úlohu
 task.form.timeWindow: Časové okno
-task.form.cancel: Zrušit
 task.form.showHistory: Zobrazit historii
 task.form.modal.moreOptions: Více možností
 task.form.edit: Změnit úlohu  %id%
@@ -426,7 +412,6 @@ form.delivery.time_slot.label: Časový slot
 form.delivery.view_order: Zobrazit objednávku
 form.order.accept.label: Přijmout
 form.order.accept.help: Po přijetí objednávky bude zákazník informován e-mailem.
-form.order.cancel.label: Zrušit
 form.order.refuse.label: Odmítnout
 form.order.fulfill.label: Splnit
 form.order.payment_complete.label: Dokončit
@@ -772,7 +757,6 @@ stores.users: Uživatelé
 stores.createNewDelivery: Vytvořit novou dodávku
 stores.settings: Nastavení
 stores.manage: Spravovat
-stores.form.save: Uložit
 roles.ROLE_STORE.help: 'Majitel obchodu: spravuje přiřazené obchody, spravuje dodávky
   …'
 roles.ROLE_RESTAURANT.help: 'Majitel restaurace: spravuje  přidělenou restauraci,
@@ -1015,3 +999,55 @@ form.registration.legal.label: Souhlasím s podmínkami a zásadami ochrany osob
 base.footer.terms: Podmínky služby
 base.footer.privacy: Soukromí
 authentication.choose_password: Zvolte si své heslo
+refund.list.disclaimer.admin: Pokud je za incident odpovědná platforma, znamená to,
+  že platforma dluží obchodníkovi částku vrácení peněz, protože obchodník zákazníkovi
+  skutečně vrátil peníze.
+refund.list.refunded_at: Vráceno na
+refund.list.debit_total: Celková částka splatná platformou podniku
+refund.list.comments: Komentáře
+refund.list.liable_party: Povinná strana
+refund.list.amount: Vrácená částka
+form:
+  restaurant:
+    b2b:
+      label: Chcete navrhnout speciální nabídky pro společnosti?
+    contact_referent:
+      label: Kontaktní osoba pro restauraci
+    name:
+      label: Název restaurace
+basics.configure: Konfigurovat
+basics.description: Popis
+form.customize.custom_banner.help: Ujistěte se, že banner je opakovatelný vzor SVG
+form.customize.custom_banner.label: Vlastní banner
+form.local_business.mercadopago.connect_button.text: Připojit na Mercado Pago
+form.settings.mercadopago.redirect_uri.help: 'Při konfiguraci aplikace použijte následující
+  identifikátor URI přesměrování: <code>%redirect_uri%</code>'
+form.settings.mercadopago.app_id.help: Chcete-li získat ID aplikace, musíte <a href="https://www.mercadopago.com.br/developers/es/guides/marketplace/api/create-marketplace/">
+  vytvořit aplikaci </a>.
+form.settings.mercadopago.app_id.label: Application ID
+form.settings.mercadopago.access_token.help: Získejte <a href="https://www.mercadopago.com.%country%/developers/panel/credentials"
+  target="_blank"> přístupový token </a>
+form.settings.mercadopago.access_token.label: Přístupový token
+form.settings.mercadopago.title: Mercado Pago
+form.settings.mercadopago.publishable_key.help: Získejte <a href="https://www.mercadopago.com.%country%/developers/panel/credentials"
+  target="_blank"> klíč k publikování </a>
+form.settings.mercadopago.publishable_key.label: Publikovatelný klíč
+form.company.make_the_request.label: Poslat žádost
+form.address.company.meal_estimate.label: Odhadovaný počet jídel (za den)
+form.address.company.collaborator_number.label: Počet zaměstnanců
+form.address.company.function.label: Pozice kontaktní osoby
+form.address.company.business_reference.label: Kontaktní osoba pro společnost
+form.address.company_name.label: Jméno společnosti
+form.payment.refund_application_fee.help: "Pokud zaškrtnete toto políčko, provize\
+  \ účtovaná platformou partnerovi bude vrácena proporcionálně\n<br>\n<a href=\"https://stripe.com/docs/connect/direct-charges#issuing-refunds\"\
+  > Další informace </a>\n"
+form.payment.refund_comment.help: Popište, co se stalo
+form.payment.refund_comment.label: Komentáře
+form.payment.refund_liable.help: Která strana odpovídá za incident?
+form.payment.refund_liable.label: Povinná strana
+adminDashboard.users.last_order: Poslední objednávka
+adminDashboard.users.registered_at: Registrovaný
+adminDashboard.users.orders_count: Počet objednávek
+base.footer.RegisterMyRestaurant: Zaregistrovat moji restauraci
+base.footer.companyRegister: Stát se partnerem
+form.time_slot.choices.error.empty: Seznam možností nemůže být prázdný

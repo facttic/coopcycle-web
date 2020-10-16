@@ -31,7 +31,11 @@
         <option name="default">0</option>
       </options>
     </field>
-    <field name="shippingOptionsDays" type="integer" column="shipping_options_days" nullable="false"/>
+    <field name="shippingOptionsDays" type="integer" column="shipping_options_days" nullable="false">
+      <options>
+        <option name="default">2</option>
+      </options>
+    </field>
     <field name="imageName" type="string" column="image_name" length="255" nullable="true"/>
     <field name="website" type="string" column="website" nullable="true"/>
     <field name="telephone" type="phone_number" column="telephone" nullable="true"/>
@@ -77,26 +81,42 @@
       </options>
     </field>
     <gedmo:soft-deleteable field-name="deletedAt" time-aware="false" hard-delete="false" />
-    <one-to-one field="contract" target-entity="AppBundle\Entity\Contract" mapped-by="restaurant">
+    <many-to-one field="contract" target-entity="AppBundle\Entity\Contract">
       <cascade>
         <cascade-persist/>
       </cascade>
-    </one-to-one>
+    </many-to-one>
     <one-to-one field="pledge" target-entity="AppBundle\Entity\Restaurant\Pledge" mapped-by="restaurant">
       <cascade>
         <cascade-all/>
       </cascade>
     </one-to-one>
-    <one-to-many field="fulfillmentMethods" target-entity="AppBundle\Entity\LocalBusiness\FulfillmentMethod" mapped-by="restaurant">
+    <many-to-many field="fulfillmentMethods" target-entity="AppBundle\Entity\LocalBusiness\FulfillmentMethod">
+      <join-table name="restaurant_fulfillment_methods">
+        <join-columns>
+          <join-column name="restaurant_id" referenced-column-name="id" />
+        </join-columns>
+        <inverse-join-columns>
+          <join-column name="method_id" referenced-column-name="id" unique="true" />
+        </inverse-join-columns>
+      </join-table>
       <cascade>
         <cascade-all/>
       </cascade>
-    </one-to-many>
-    <one-to-many field="closingRules" target-entity="AppBundle\Entity\ClosingRule" mapped-by="restaurant">
+    </many-to-many>
+    <many-to-many field="closingRules" target-entity="AppBundle\Entity\ClosingRule">
+      <join-table name="restaurant_closing_rule">
+        <join-columns>
+          <join-column name="restaurant_id" referenced-column-name="id" />
+        </join-columns>
+        <inverse-join-columns>
+          <join-column name="rule_id" referenced-column-name="id" unique="true" />
+        </inverse-join-columns>
+      </join-table>
       <cascade>
         <cascade-all/>
       </cascade>
-    </one-to-many>
+    </many-to-many>
     <one-to-many field="preparationTimeRules" target-entity="AppBundle\Entity\Restaurant\PreparationTimeRule" mapped-by="restaurant">
       <cascade>
         <cascade-all/>
@@ -120,7 +140,6 @@
         <cascade-all/>
       </cascade>
     </one-to-many>
-    <one-to-many field="orders" target-entity="AppBundle\Entity\Sylius\Order" mapped-by="restaurant"/>
     <many-to-one field="address" target-entity="AppBundle\Entity\Address" fetch="EAGER">
       <cascade>
         <cascade-all/>
@@ -158,7 +177,7 @@
         <order-by-field name="name" direction="ASC"/>
       </order-by>
     </many-to-many>
-    <many-to-many field="owners" target-entity="AppBundle\Entity\ApiUser" mapped-by="restaurants"/>
+    <many-to-many field="owners" target-entity="AppBundle\Entity\User" mapped-by="restaurants"/>
     <many-to-many field="products" target-entity="AppBundle\Entity\Sylius\Product">
       <cascade>
         <cascade-persist/>

@@ -2,7 +2,7 @@
 
 namespace AppBundle\Form;
 
-use AppBundle\Entity\ApiUser;
+use AppBundle\Entity\User;
 use AppBundle\Entity\LocalBusiness;
 use AppBundle\Entity\Store;
 use libphonenumber\PhoneNumberFormat;
@@ -41,13 +41,10 @@ class UpdateProfileType extends AbstractType
                 'label' => 'profile.username',
                 'required' => false,
             ])
-            ->add('familyName', TextType::class, [
-                'label' => 'profile.familyName',
+            ->add('fullName', TextType::class, [
+                'label' => 'profile.fullName',
                 'required' => false,
-            ])
-            ->add('givenName', TextType::class, [
-                'label' => 'profile.givenName',
-                'required' => false,
+                'property_path' => 'customer.fullName',
             ])
             ->add('telephone', PhoneNumberType::class, [
                 'label' => 'profile.telephone',
@@ -141,7 +138,7 @@ class UpdateProfileType extends AbstractType
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(array(
-           'data_class' => ApiUser::class,
+           'data_class' => User::class,
            'with_restaurants' => false,
            'with_stores' => false,
            'with_roles' => false,

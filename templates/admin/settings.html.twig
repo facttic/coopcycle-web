@@ -35,6 +35,7 @@
   </div>
 
   {{ form_row(form.subject_to_vat) }}
+  {{ form_row(form.guest_checkout_enabled) }}
 
   <div class="alert alert-danger">
     <i class="fa fa-warning"></i> {{ 'form.maintenance.enable.label'|trans }}
@@ -64,6 +65,47 @@
   {% if form.mercadopago is defined %}
     {% include 'admin/_partials/mercadopago.html.twig' %}
   {% endif %}
+
+  <hr>
+
+  <h4>{% trans %}form.settings.sms.title{% endtrans %}</h4>
+
+  <div class="alert alert-warning">
+    <i class="fa fa-warning"></i> {{ 'form.settings.sms_enabled.label'|trans }}
+    <div class="pull-right">
+      <div id="sms_enabled_switch"></div>
+    </div>
+  </div>
+
+  <div class="collapse {% if form.vars.value.sms_enabled %}in{% endif %}" id="settings_sms_options">
+
+    {{ form_row(form.sms_enabled) }}
+    {{ form_row(form.sms_gateway) }}
+    {{ form_row(form.sms_gateway_config) }}
+
+    <div class="{% if form.vars.value.sms_gateway != 'mailjet' %}d-none{% endif %}" data-sms-gateway="mailjet">
+      <div class="form-group">
+        <label class="control-label" for="mailjet_config_api_token">{{ 'form.settings.sms_gateway_config.mailjet.api_token.label'|trans }}</label>
+        <input type="text" id="mailjet_config_api_token" class="form-control" data-sms-gateway-config-key="api_token">
+      </div>
+    </div>
+
+    <div class="{% if form.vars.value.sms_gateway != 'twilio' %}d-none{% endif %}" data-sms-gateway="twilio">
+      <div class="form-group">
+        <label class="control-label" for="twilio_config_sid">{{ 'form.settings.sms_gateway_config.twilio.sid.label'|trans }}</label>
+        <input type="text" id="twilio_config_sid" class="form-control" data-sms-gateway-config-key="sid">
+      </div>
+      <div class="form-group">
+        <label class="control-label" for="twilio_config_auth_token">{{ 'form.settings.sms_gateway_config.twilio.auth_token.label'|trans }}</label>
+        <input type="text" id="twilio_config_auth_token" class="form-control" data-sms-gateway-config-key="auth_token">
+      </div>
+      <div class="form-group">
+        <label class="control-label" for="twilio_config_from">{{ 'form.settings.sms_gateway_config.twilio.from.label'|trans }}</label>
+        <input type="text" id="twilio_config_from" class="form-control" data-sms-gateway-config-key="from">
+      </div>
+    </div>
+
+  </div>
 
   <hr>
 
@@ -219,7 +261,7 @@
     var canEnableMercadopagoLivemode = {{ can_enable_mercadopago_livemode ? 'true' : 'false' }};
     var isDemo = {{ is_demo ? 'true' : 'false' }};
 
-    var maintenanceSwitch, bannerSwitch, stripeLiveModeSwitch, mercadopagoLiveModeSwitch;
+    var maintenanceSwitch, bannerSwitch, stripeLiveModeSwitch, mercadopagoLiveModeSwitch, smsEnableSwitch;
 
     /* Maintenance */
 
@@ -395,7 +437,48 @@
         format: 'png',
         enableResize: true
       }
+    });
+
+    var $smsEnabledCheckbox = $('#settings_sms_enabled');
+    $smsEnabledCheckbox.closest('.form-group').addClass('hidden');
+
+    $('#settings_sms_gateway').on('change', function() {
+      $('[data-sms-gateway]').addClass('d-none');
+      $('[data-sms-gateway="' + $(this).val() + '"]').removeClass('d-none');
+    });
+
+    $('[data-sms-gateway-config-key]').on('input', function() {
+      var gateway = $('#settings_sms_gateway').val();
+      var config = {}
+      $('[data-sms-gateway="' + gateway + '"]')
+        .find('[data-sms-gateway-config-key]')
+        .each(function () {
+          var key = $(this).attr('data-sms-gateway-config-key');
+          config[key] = $(this).val();
+        });
+      $('#settings_sms_gateway_config').val(JSON.stringify(config));
     })
+
+    if ($('#settings_sms_gateway').val() === 'mailjet') {
+      var mailjetConfig = JSON.parse($('#settings_sms_gateway_config').val());
+      $('#mailjet_config_api_token').val(''.padStart(mailjetConfig.api_token.length, '•'));
+    }
+
+    if ($('#settings_sms_gateway').val() === 'twilio') {
+      var twilioConfig = JSON.parse($('#settings_sms_gateway_config').val());
+      $('#twilio_config_sid').val(''.padStart(twilioConfig.sid.length, '•'));
+      $('#twilio_config_auth_token').val(''.padStart(twilioConfig.auth_token.length, '•'));
+      $('#twilio_config_from').val(twilioConfig.from);
+    }
+
+    smsEnableSwitch = new CoopCycle.Switch(document.querySelector('#sms_enabled_switch'), {
+      checked: $smsEnabledCheckbox.is(':checked'),
+      disabled: isDemo,
+      onChange: function(checked) {
+        $smsEnabledCheckbox.prop('checked', checked)
+        $('#settings_sms_options').collapse('toggle');
+      }
+    });
 
   })();
 

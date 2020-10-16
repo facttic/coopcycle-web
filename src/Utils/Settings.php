@@ -46,6 +46,12 @@ class Settings
      */
     public $stripe_live_connect_client_id;
 
+    public $sms_enabled;
+
+    public $sms_gateway;
+
+    public $sms_gateway_config;
+
     /**
      * @Assert\Choice({"yes", "no"})
      */
@@ -85,4 +91,6 @@ class Settings
     public $mercadopago_live_access_token;
 
     public $mercadopago_app_id;
+
+    public $guest_checkout_enabled;
 }

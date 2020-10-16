@@ -75,9 +75,29 @@ export default function(el, options) {
 
   // Callback with initial data
   let address
+
   if (existingAddressControlSelected.dataset.address) {
     address = JSON.parse(existingAddressControlSelected.dataset.address)
-    options.onReady(address)
+    if (options.onReady && typeof options.onReady === 'function') {
+      options.onReady(address)
+    }
+  }
+
+  if (isNewAddressControl.checked && newAddressControl.value) {
+    address = {
+      streetAddress: newAddressControl.value,
+      postalCode: el.querySelector('[data-address-prop="postalCode"]').value,
+      addressLocality: el.querySelector('[data-address-prop="addressLocality"]').value,
+      latitude: el.querySelector('[data-address-prop="latitude"]').value,
+      longitude: el.querySelector('[data-address-prop="longitude"]').value,
+      geo: {
+        latitude: el.querySelector('[data-address-prop="latitude"]').value,
+        longitude: el.querySelector('[data-address-prop="longitude"]').value,
+      }
+    }
+    if (options.onReady && typeof options.onReady === 'function') {
+      options.onReady(address)
+    }
   }
 
   const reactContainer = document.createElement('div')
@@ -109,7 +129,9 @@ export default function(el, options) {
           }
         }
 
-        options.onChange(address)
+        if (options.onChange && typeof options.onChange === 'function') {
+          options.onChange(address)
+        }
 
       } }
       { ...autosuggestProps } />,

@@ -3,9 +3,12 @@
 namespace AppBundle\Validator\Constraints;
 
 use AppBundle\LoopEat\Client as LoopEatClient;
+use AppBundle\LoopEat\GuestCheckoutAwareAdapter as LoopEatAdapter;
+use AppBundle\Sylius\Customer\CustomerInterface;
 use AppBundle\Sylius\Order\OrderInterface;
 use GuzzleHttp\Exception\RequestException;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\ConstraintValidator;
@@ -14,12 +17,16 @@ use Symfony\Component\Validator\Validation;
 class LoopEatOrderValidator extends ConstraintValidator
 {
     private $client;
+    private $session;
+    private $logger;
 
     public function __construct(
         LoopEatClient $client,
+        SessionInterface $session,
         LoggerInterface $logger)
     {
         $this->client = $client;
+        $this->session = $session;
         $this->logger = $logger;
     }
 
@@ -52,8 +59,11 @@ class LoopEatOrderValidator extends ConstraintValidator
             return;
         }
 
+        $adapter = new LoopEatAdapter($object, $this->session);
+
         try {
-            $currentCustomer = $this->client->currentCustomer($object->getCustomer());
+
+            $currentCustomer = $this->client->currentCustomer($adapter);
             $loopeatBalance = $currentCustomer['loopeatBalance'];
             $pledgeReturn = $object->getReusablePackagingPledgeReturn();
             $missing = $quantity - $loopeatBalance - $pledgeReturn;
@@ -72,6 +82,5 @@ class LoopEatOrderValidator extends ConstraintValidator
 
             $this->logger->error($e->getMessage());
         }
-
     }
 }

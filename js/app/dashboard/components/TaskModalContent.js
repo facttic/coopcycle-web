@@ -16,6 +16,7 @@ import CourierSelect from './CourierSelect'
 import { timePickerProps } from '../../utils/antd'
 
 import { closeNewTaskModal, createTask, startTask, completeTask, cancelTask, duplicateTask, loadTaskEvents } from '../redux/actions'
+import { selectSelectedDate } from 'coopcycle-frontend-js/dispatch/redux'
 
 const itemColor = event => {
   switch (event.name) {
@@ -49,10 +50,23 @@ class TaskModalContent extends React.Component {
 
   renderHeaderText(task) {
     if (!!task && Object.prototype.hasOwnProperty.call(task, '@id')) {
-      return this.props.t('ADMIN_DASHBOARD_TASK_TITLE', { id: task.id })
+
+      return (
+        <span>
+          { (task.orgName && !_.isEmpty(task.orgName)) && (
+          <span>
+            <span>{ task.orgName }</span>
+            <span className="mx-2">›</span>
+          </span>
+          ) }
+          <span>{ this.props.t('ADMIN_DASHBOARD_TASK_TITLE', { id: task.id }) }</span>
+        </span>
+      )
     }
 
-    return this.props.t('ADMIN_DASHBOARD_TASK_TITLE_NEW')
+    return (
+      <span>{ this.props.t('ADMIN_DASHBOARD_TASK_TITLE_NEW') }</span>
+    )
   }
 
   renderCompleteForm() {
@@ -532,7 +546,7 @@ function mapStateToProps (state) {
     completeTaskErrorMessage: state.completeTaskErrorMessage,
     country,
     phoneNumberExample: phoneNumber.formatNational(),
-    date: state.date,
+    date: selectSelectedDate(state),
     isTaskTypeEditable: isTaskTypeEditable(state.currentTask),
     isLoadingEvents: state.isLoadingTaskEvents,
     events,

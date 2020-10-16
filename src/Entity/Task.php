@@ -20,10 +20,13 @@ use AppBundle\Domain\Task\Event as TaskDomainEvent;
 use AppBundle\Entity\Task\Group as TaskGroup;
 use AppBundle\Entity\Model\TaggableInterface;
 use AppBundle\Entity\Model\TaggableTrait;
+use AppBundle\Entity\Model\OrganizationAwareInterface;
+use AppBundle\Entity\Model\OrganizationAwareTrait;
 use AppBundle\Validator\Constraints\Task as AssertTask;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Criteria;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Serializer\Annotation\SerializedName;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -171,10 +174,12 @@ use Symfony\Component\Validator\Constraints as Assert;
  * @ApiFilter(TaskDateFilter::class, properties={"date"})
  * @ApiFilter(TaskFilter::class)
  * @ApiFilter(AssignedFilter::class, properties={"assigned"})
+ * @UniqueEntity(fields={"organization", "ref"}, errorPath="ref")
  */
-class Task implements TaggableInterface
+class Task implements TaggableInterface, OrganizationAwareInterface
 {
     use TaggableTrait;
+    use OrganizationAwareTrait;
 
     const TYPE_DROPOFF = 'DROPOFF';
     const TYPE_PICKUP = 'PICKUP';
@@ -271,6 +276,11 @@ class Task implements TaggableInterface
      * @Groups({"task", "task_create", "task_edit"})
      */
     private $doorstep = false;
+
+    /**
+     * @Groups({"task", "task_create"})
+     */
+    private $ref;
 
     public function __construct()
     {
@@ -492,7 +502,7 @@ class Task implements TaggableInterface
         return null !== $this->assignedTo;
     }
 
-    public function isAssignedTo(ApiUser $courier)
+    public function isAssignedTo(User $courier)
     {
         return $this->isAssigned() && $this->assignedTo === $courier;
     }
@@ -508,10 +518,10 @@ class Task implements TaggableInterface
     }
 
     /**
-     * @param ApiUser $courier
+     * @param User $courier
      * @param \DateTime|null $date
      */
-    public function assignTo(ApiUser $courier, \DateTime $date = null)
+    public function assignTo(User $courier, \DateTime $date = null)
     {
         if (null === $date) {
             @trigger_error('Not specifying a date when calling assignTo() is deprecated', E_USER_DEPRECATED);
@@ -603,7 +613,7 @@ class Task implements TaggableInterface
         return $this->createdAt;
     }
 
-    public function isReadableBy(ApiUser $user)
+    public function isReadableBy(User $user)
     {
         if ($user->hasRole('ROLE_ADMIN') || $user->hasRole('ROLE_COURIER')) {
             return true;
@@ -675,5 +685,33 @@ class Task implements TaggableInterface
     public function isDoorstep()
     {
         return $this->doorstep;
+    }
+
+    /**
+     * @SerializedName("orgName")
+     * @Groups({"task"})
+     */
+    public function getOrganizationName()
+    {
+        $organization = $this->getOrganization();
+
+        if ($organization) {
+
+            return $organization->getName();
+        }
+
+        return '';
+    }
+
+    public function setRef(string $ref)
+    {
+        $this->ref = $ref;
+
+        return $this;
+    }
+
+    public function getRef(): ?string
+    {
+        return $this->ref;
     }
 }

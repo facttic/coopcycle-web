@@ -2,16 +2,19 @@
 
 namespace AppBundle\Validator;
 
-use AppBundle\Entity\ApiUser;
+use AppBundle\Entity\User;
 use AppBundle\Entity\Restaurant;
+use AppBundle\Entity\Sylius\Customer;
 use AppBundle\Entity\Sylius\Order;
 use AppBundle\LoopEat\Client as LoopEatClient;
+use AppBundle\LoopEat\GuestCheckoutAwareAdapter as LoopEatAdapter;
 use AppBundle\Validator\Constraints\LoopEatOrder as LoopEatOrderConstraint;
 use AppBundle\Validator\Constraints\LoopEatOrderValidator;
 use Prophecy\Argument;
 use Prophecy\PhpUnit\ProphecyTrait;
 use Psr\Log\NullLogger;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Validator\Test\ConstraintValidatorTestCase;
 
 class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
@@ -25,6 +28,7 @@ class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
     {
         $this->tokenStorage = $this->prophesize(TokenStorageInterface::class);
         $this->loopeatClient = $this->prophesize(LoopEatClient::class);
+        $this->session = $this->prophesize(SessionInterface::class);
 
         parent::setUp();
     }
@@ -33,13 +37,14 @@ class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
     {
         return new LoopEatOrderValidator(
             $this->loopeatClient->reveal(),
+            $this->session->reveal(),
             new NullLogger()
         );
     }
 
     public function testDoesNothingWhenLoopeatDisabled()
     {
-        $customer = new ApiUser();
+        $customer = new Customer();
 
         $restaurant = new Restaurant();
         $restaurant->setLoopeatEnabled(false);
@@ -61,7 +66,8 @@ class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
             ->isReusablePackagingEnabled()
             ->willReturn(true);
 
-        $this->loopeatClient->currentCustomer($customer)
+        $this->loopeatClient
+            ->currentCustomer(Argument::type(LoopEatAdapter::class))
             ->willReturn(['loopeatBalance' => 2]);
 
         $constraint = new LoopEatOrderConstraint();
@@ -73,7 +79,10 @@ class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
 
     public function testInsufficientBalance()
     {
-        $customer = new ApiUser();
+        $user = new User();
+
+        $customer = new Customer();
+        $customer->setUser($user);
 
         $restaurant = new Restaurant();
         $restaurant->setLoopeatEnabled(true);
@@ -95,7 +104,8 @@ class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
             ->isReusablePackagingEnabled()
             ->willReturn(true);
 
-        $this->loopeatClient->currentCustomer($customer)
+        $this->loopeatClient
+            ->currentCustomer(Argument::type(LoopEatAdapter::class))
             ->willReturn(['loopeatBalance' => 2]);
 
         $constraint = new LoopEatOrderConstraint();
@@ -109,7 +119,10 @@ class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
 
     public function testReusablePackagingQuantityEqualsZero()
     {
-        $customer = new ApiUser();
+        $user = new User();
+
+        $customer = new Customer();
+        $customer->setUser($user);
 
         $restaurant = new Restaurant();
         $restaurant->setLoopeatEnabled(true);
@@ -128,7 +141,8 @@ class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
             ->isReusablePackagingEnabled()
             ->willReturn(true);
 
-        $this->loopeatClient->currentCustomer($customer)
+        $this->loopeatClient
+            ->currentCustomer(Argument::type(LoopEatAdapter::class))
             ->shouldNotBeCalled();
 
         $constraint = new LoopEatOrderConstraint();
@@ -141,7 +155,10 @@ class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
 
     public function testInsufficientBalanceWithPledgeReturn()
     {
-        $customer = new ApiUser();
+        $user = new User();
+
+        $customer = new Customer();
+        $customer->setUser($user);
 
         $restaurant = new Restaurant();
         $restaurant->setLoopeatEnabled(true);
@@ -163,7 +180,8 @@ class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
             ->isReusablePackagingEnabled()
             ->willReturn(true);
 
-        $this->loopeatClient->currentCustomer($customer)
+        $this->loopeatClient
+            ->currentCustomer(Argument::type(LoopEatAdapter::class))
             ->willReturn(['loopeatBalance' => 2]);
 
         $constraint = new LoopEatOrderConstraint();
@@ -177,7 +195,10 @@ class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
 
     public function testValid()
     {
-        $customer = new ApiUser();
+        $user = new User();
+
+        $customer = new Customer();
+        $customer->setUser($user);
 
         $restaurant = new Restaurant();
         $restaurant->setLoopeatEnabled(true);
@@ -199,7 +220,8 @@ class LoopEatOrderValidatorTest extends ConstraintValidatorTestCase
             ->isReusablePackagingEnabled()
             ->willReturn(true);
 
-        $this->loopeatClient->currentCustomer($customer)
+        $this->loopeatClient
+            ->currentCustomer(Argument::type(LoopEatAdapter::class))
             ->willReturn(['loopeatBalance' => 3]);
 
         $constraint = new LoopEatOrderConstraint();

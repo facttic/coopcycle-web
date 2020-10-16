@@ -21,6 +21,7 @@ class PreparationTimeCalculator
 {
     private $config;
     private $language;
+    private $cache = [];
 
     /**
      * @param array $config
@@ -36,45 +37,72 @@ class PreparationTimeCalculator
         return $this->config;
     }
 
-    public function calculate(OrderInterface $order)
+    /**
+     * Returns a time expression string, for ex. "15 minutes".
+     *
+     * @param OrderInterface $order
+     * @return string
+     */
+    public function calculate(OrderInterface $order): string
     {
-        $preparation = '0 minutes';
-        foreach ($this->config as $expression => $value) {
+        $times = [];
 
-            $restaurantObject = new \stdClass();
-            $restaurantObject->state = $order->getRestaurant()->getState();
+        foreach ($order->getTarget()->toArray() as $restaurant) {
 
-            $orderObject = new \stdClass();
-            $orderObject->itemsTotal = $order->getItemsTotal();
+            $preparation = '0 minutes';
+            foreach ($this->getConfig($restaurant) as $expression => $value) {
 
-            $values = [
-                'restaurant' => $restaurantObject,
-                'order' => $orderObject,
-            ];
+                $restaurantObject = new \stdClass();
+                $restaurantObject->state = $restaurant->getState();
 
-            if (true === $this->language->evaluate($expression, $values)) {
-                $preparation = $value;
-                break;
+                $orderObject = new \stdClass();
+                $orderObject->itemsTotal = $order->getItemsTotal();
+
+                $values = [
+                    'restaurant' => $restaurantObject,
+                    'order' => $orderObject,
+                ];
+
+                if (true === $this->language->evaluate($expression, $values)) {
+                    $preparation = $value;
+                    break;
+                }
             }
+
+            $times[] = $preparation;
         }
 
-        return $preparation;
+        uasort($times, function ($a, $b) {
+            $now = new \DateTime();
+            $aDate = clone $now;
+            $bDate = clone $now;
+
+            $aDate->add(date_interval_create_from_date_string($a));
+            $bDate->add(date_interval_create_from_date_string($b));
+
+            return $aDate > $bDate ? -1 : 1;
+        });
+
+        return current($times);
     }
 
-    public function createForRestaurant(LocalBusiness $restaurant)
+    private function getConfig(LocalBusiness $restaurant)
     {
-        $preparationTimeRules = $restaurant->getPreparationTimeRules();
+        $oid = spl_object_hash($restaurant);
 
-        if (count($preparationTimeRules) > 0) {
+        if (!isset($this->cache[$oid])) {
+
+            $rules = $restaurant->getPreparationTimeRules();
             $config = [];
-
-            foreach ($preparationTimeRules as $preparationTimeRule) {
-                $config[$preparationTimeRule->getExpression()] = $preparationTimeRule->getTime();
+            if (count($rules) > 0) {
+                foreach ($rules as $rule) {
+                    $config[$rule->getExpression()] = $rule->getTime();
+                }
             }
 
-            return new self($config);
+            $this->cache[$oid] = $config;
         }
 
-        return $this;
+        return count($this->cache[$oid]) > 0 ? $this->cache[$oid] : $this->config;
     }
 }

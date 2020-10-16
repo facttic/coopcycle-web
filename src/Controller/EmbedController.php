@@ -5,17 +5,18 @@ namespace AppBundle\Controller;
 use AppBundle\Controller\Utils\DeliveryTrait;
 use AppBundle\Entity\Address;
 use AppBundle\Entity\Delivery;
+use AppBundle\Entity\DeliveryForm;
 use AppBundle\Entity\Delivery\PricingRuleSet;
 use AppBundle\Exception\Pricing\NoRuleMatchedException;
 use AppBundle\Form\Checkout\CheckoutPaymentType;
 use AppBundle\Form\DeliveryEmbedType;
 use AppBundle\Service\DeliveryManager;
 use AppBundle\Service\OrderManager;
-use AppBundle\Service\SettingsManager;
 use AppBundle\Sylius\Order\OrderInterface;
-use Cocur\Slugify\SlugifyInterface;
 use Doctrine\ORM\EntityManagerInterface;
-use FOS\UserBundle\Util\UserManipulator;
+use FOS\UserBundle\Util\CanonicalizerInterface;
+use Hashids\Hashids;
+use libphonenumber\PhoneNumber;
 use Sylius\Component\Taxation\Resolver\TaxRateResolverInterface;
 use Sylius\Component\Order\Repository\OrderRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
@@ -24,6 +25,7 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -46,83 +48,117 @@ class EmbedController extends Controller
         return $this->get('form.factory')->createNamed('delivery', DeliveryEmbedType::class, $delivery, $options);
     }
 
-    private function getPricingRuleSet()
+    private function findOrCreateCustomer($email, PhoneNumber $telephone, CanonicalizerInterface $canonicalizer)
     {
-        $pricingRuleSet = null;
-        try {
-            $pricingRuleSetId = $this->get('craue_config')->get('embed.delivery.pricingRuleSet');
-            if ($pricingRuleSetId) {
-                $pricingRuleSet = $this->getDoctrine()
-                    ->getRepository(PricingRuleSet::class)
-                    ->find($pricingRuleSetId);
-            }
-        } catch (\RuntimeException $e) {}
+        $customer = $this->get('sylius.repository.customer')
+            ->findOneBy([
+                'emailCanonical' => $canonicalizer->canonicalize($email)
+            ]);
 
-        return $pricingRuleSet;
+        if (!$customer) {
+            $customer = $this->get('sylius.factory.customer')->createNew();
+
+            $customer->setEmail($email);
+            $customer->setEmailCanonical($canonicalizer->canonicalize($email));
+        }
+
+        // Make sure to use setTelephone(),
+        // so that it converts PhoneNumber to ISO string
+        $customer->setTelephone($telephone);
+
+        return $customer;
     }
 
-    private function findOrCreateUser($email, $telephone, SlugifyInterface $slugify, UserManipulator $userManipulator)
+    private function decode($hashid)
     {
-        $userManager = $this->get('fos_user.user_manager');
+        $hashids = new Hashids($this->getParameter('secret'), 12);
 
-        $user = $userManager->findUserByEmail($email);
-        if (!$user) {
+        $decoded = $hashids->decode($hashid);
 
-            [ $localPart, $domain ] = explode('@', $email);
-            $username = $slugify->slugify($localPart, ['separator' => '_']);
-            $password = random_bytes(16);
-
-            $user = $userManipulator->create($username, $password, $email, true, false);
+        if (count($decoded) !== 1) {
+            throw new BadRequestHttpException(sprintf('Hashid "%s" could not be decoded', $hashid));
         }
 
-        if (null === $user->getTelephone() || !$user->getTelephone()->equals($telephone)) {
-            $user->setTelephone($telephone);
-            $userManager->updateUser($user);
+        $id = current($decoded);
+        $deliveryForm = $this->getDoctrine()->getRepository(DeliveryForm::class)->find($id);
+
+        if (null === $deliveryForm) {
+            throw $this->createNotFoundException(sprintf('DeliveryForm #%d does not exist', $id));
         }
 
-        return $user;
+        return $deliveryForm;
     }
 
     /**
-     * @Route("/embed/delivery/start", name="embed_delivery_start")
+     * @Route("/embed/delivery/start", name="embed_delivery_start_legacy")
      */
-    public function deliveryStartAction(Request $request)
+    public function deliveryStartLegacyAction()
+    {
+        $qb = $this->getDoctrine()
+            ->getRepository(DeliveryForm::class)
+            ->createQueryBuilder('df');
+
+        $qb->orderBy('df.id', 'ASC');
+        $qb->setMaxResults(1);
+
+        $deliveryForm = $qb->getQuery()->getOneOrNullResult();
+
+        if (!$deliveryForm) {
+            throw $this->createNotFoundException();
+        }
+
+        $hashids = new Hashids($this->getParameter('secret'), 12);
+
+        return $this->forward('AppBundle\Controller\EmbedController::deliveryStartAction', [
+            'hashid'  => $hashids->encode($deliveryForm->getId()),
+        ]);
+    }
+
+    /**
+     * @Route("/forms/{hashid}", name="embed_delivery_start")
+     */
+    public function deliveryStartAction($hashid, Request $request)
     {
         if ($this->container->has('profiler')) {
             $this->container->get('profiler')->disable();
         }
 
-        $pricingRuleSet = $this->getPricingRuleSet();
-        if (!$pricingRuleSet) {
-            throw new NotFoundHttpException('Pricing rule set not configured');
-        }
+        $deliveryForm = $this->decode($hashid);
 
-        $form = $this->doCreateDeliveryForm();
+        $form = $this->doCreateDeliveryForm([
+            'with_weight' => $deliveryForm->getWithWeight(),
+            'with_vehicle' => $deliveryForm->getWithVehicle(),
+            'with_time_slot' => $deliveryForm->getTimeSlot(),
+            'with_package_set' => $deliveryForm->getPackageSet(),
+        ]);
         $form->handleRequest($request);
 
         return $this->render('embed/delivery/start.html.twig', [
             'form' => $form->createView(),
+            'hashid' => $hashid,
         ]);
     }
 
     /**
-     * @Route("/embed/delivery/summary", name="embed_delivery_summary")
+     * @Route("/forms/{hashid}/summary", name="embed_delivery_summary")
      */
-    public function deliverySummaryAction(Request $request,
+    public function deliverySummaryAction($hashid, Request $request,
         DeliveryManager $deliveryManager,
-        SettingsManager $settingsManager,
         TaxRateResolverInterface $taxRateResolver)
     {
         if ($this->container->has('profiler')) {
             $this->container->get('profiler')->disable();
         }
 
-        $pricingRuleSet = $this->getPricingRuleSet();
-        if (!$pricingRuleSet) {
-            throw new NotFoundHttpException('Pricing rule set not configured');
-        }
+        $deliveryForm = $this->decode($hashid);
 
-        $form = $this->doCreateDeliveryForm(['with_payment' => true]);
+        $form = $this->doCreateDeliveryForm([
+            'with_weight' => $deliveryForm->getWithWeight(),
+            'with_vehicle' => $deliveryForm->getWithVehicle(),
+            'with_time_slot' => $deliveryForm->getTimeSlot(),
+            'with_package_set' => $deliveryForm->getPackageSet(),
+            'with_payment' => true,
+        ]);
 
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
@@ -130,7 +166,11 @@ class EmbedController extends Controller
             try {
 
                 $delivery = $form->getData();
-                $price = $this->getDeliveryPrice($delivery, $pricingRuleSet, $deliveryManager);
+                $price = $this->getDeliveryPrice(
+                    $delivery,
+                    $deliveryForm->getPricingRuleSet(),
+                    $deliveryManager
+                );
 
                 $rate = $taxRateResolver->resolve(
                     $this->get('sylius.factory.product_variant')->createForDelivery($delivery, $price)
@@ -139,6 +179,7 @@ class EmbedController extends Controller
                 $priceExcludingTax = (int) round($price / (1 + $rate->getAmount()));
 
                 return $this->render('embed/delivery/summary.html.twig', [
+                    'hashid' => $hashid,
                     'price' => $price,
                     'price_excluding_tax' => $priceExcludingTax,
                     'form' => $form->createView(),
@@ -153,31 +194,33 @@ class EmbedController extends Controller
 
         return $this->render('embed/delivery/start.html.twig', [
             'form' => $form->createView(),
+            'hashid' => $hashid,
         ]);
     }
 
     /**
-     * @Route("/embed/delivery/process", name="embed_delivery_process")
+     * @Route("/forms/{hashid}/process", name="embed_delivery_process")
      */
-    public function deliveryProcessAction(
-        Request $request,
-        SlugifyInterface $slugify,
+    public function deliveryProcessAction($hashid, Request $request,
         OrderRepositoryInterface $orderRepository,
         OrderManager $orderManager,
         EntityManagerInterface $objectManager,
         DeliveryManager $deliveryManager,
-        UserManipulator $userManipulator)
+        CanonicalizerInterface $canonicalizer)
     {
         if ($this->container->has('profiler')) {
             $this->container->get('profiler')->disable();
         }
 
-        $pricingRuleSet = $this->getPricingRuleSet();
-        if (!$pricingRuleSet) {
-            throw new NotFoundHttpException('Pricing rule set not configured');
-        }
+        $deliveryForm = $this->decode($hashid);
 
-        $form = $this->doCreateDeliveryForm(['with_payment' => true]);
+        $form = $this->doCreateDeliveryForm([
+            'with_weight' => $deliveryForm->getWithWeight(),
+            'with_vehicle' => $deliveryForm->getWithVehicle(),
+            'with_time_slot' => $deliveryForm->getTimeSlot(),
+            'with_package_set' => $deliveryForm->getPackageSet(),
+            'with_payment' => true,
+        ]);
 
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
@@ -189,15 +232,17 @@ class EmbedController extends Controller
             $email = $form->get('email')->getData();
             $telephone = $form->get('telephone')->getData();
 
-            $user  = $this->findOrCreateUser($email, $telephone, $slugify, $userManipulator);
-            $price = $this->getDeliveryPrice($delivery, $pricingRuleSet, $deliveryManager);
-            $order = $this->createOrderForDelivery($delivery, $price, $user);
+            $customer = $this->findOrCreateCustomer($email, $telephone, $canonicalizer);
+            $price = $this->getDeliveryPrice(
+                $delivery,
+                $deliveryForm->getPricingRuleSet(),
+                $deliveryManager
+            );
+            $order = $this->createOrderForDelivery($delivery, $price, $customer);
 
-            $billingAddress = $form->get('billingAddress')->getData();
-            $this->setBillingAddress($order, $billingAddress);
-
-            $name = $form->get('name')->getData();
-            $order->setNotes($name);
+            if ($billingAddress = $form->get('billingAddress')->getData()) {
+                $this->setBillingAddress($order, $billingAddress);
+            }
 
             $orderRepository->add($order);
             $orderManager->checkout($order, $stripeToken);
@@ -213,6 +258,7 @@ class EmbedController extends Controller
 
         return $this->render('embed/delivery/summary.html.twig', [
             'form' => $form->createView(),
+            'hashid' => $hashid,
         ]);
     }
 

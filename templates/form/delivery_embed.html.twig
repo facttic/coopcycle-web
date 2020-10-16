@@ -4,20 +4,27 @@
 
   {{ form_label(form) }}
 
-  {{ form_row(form.address.streetAddress, { label: false }) }}
-  {{ form_row(form.doneBefore, { label: 'form.delivery.' ~ form.vars.name ~ '.doneBefore.label' }) }}
+  {{ form_row(form.address) }}
+
+  {% if form.doneBefore is defined %}
+    {{ form_row(form.doneBefore, { label: 'form.delivery.' ~ form.vars.name ~ '.doneBefore.label' }) }}
+  {% endif %}
+
+  {% if form.timeSlot is defined %}
+    {{ form_row(form.timeSlot) }}
+  {% endif %}
 
   {% if form.vars.value.type == 'PICKUP' and form.parent.weight is defined %}
     {{ form_row(form.parent.weight) }}
   {% endif %}
 
-  {{ form_row(form.address.description) }}
+  {% if form.vars.value.type == 'PICKUP' and form.parent.packages is defined %}
+    {{ form_row(form.parent.packages) }}
+  {% endif %}
+
+  {{ form_row(form.address.newAddress.description) }}
 
   {{ form_widget(form.type) }}
-  {{ form_widget(form.address.latitude) }}
-  {{ form_widget(form.address.longitude) }}
-  {{ form_widget(form.address.postalCode) }}
-  {{ form_widget(form.address.addressLocality) }}
 
 {% endblock %}
 

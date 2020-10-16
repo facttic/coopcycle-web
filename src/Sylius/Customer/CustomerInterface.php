@@ -3,13 +3,15 @@
 namespace AppBundle\Sylius\Customer;
 
 use AppBundle\Entity\Address;
-use AppBundle\Entity\ApiUser;
+use AppBundle\Entity\User;
+use AppBundle\LoopEat\OAuthCredentialsInterface;
 use AppBundle\Sylius\Order\OrderInterface;
 use Doctrine\Common\Collections\Collection;
+use libphonenumber\PhoneNumber;
 use Sylius\Component\Customer\Model\CustomerInterface as BaseCustomerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
-interface CustomerInterface extends BaseCustomerInterface
+interface CustomerInterface extends BaseCustomerInterface, OAuthCredentialsInterface
 {
     /**
      * @return Collection|OrderInterface[]
@@ -54,12 +56,17 @@ interface CustomerInterface extends BaseCustomerInterface
     public function hasUser(): bool;
 
     /**
-     * @return ApiUser|UserInterface|null
+     * @return User|UserInterface|null
      */
     public function getUser(): ?UserInterface;
 
     /**
-     * @param ApiUser|UserInterface|null $user
+     * @param User|UserInterface|null $user
      */
     public function setUser(?UserInterface $user);
+
+    /**
+     * @param PhoneNumber|string $telephone
+     */
+    public function setTelephone($telephone);
 }

@@ -3,9 +3,12 @@ import { connect } from 'react-redux'
 import { withTranslation } from 'react-i18next'
 import moment from 'moment'
 import { ContextMenuTrigger } from 'react-contextmenu'
+import _ from 'lodash'
 
 import { setCurrentTask, toggleTask, selectTask } from '../redux/actions'
-import { selectTasksWithColor, selectIsVisibleTask } from '../redux/selectors'
+import { selectIsVisibleTask } from '../redux/selectors'
+import { selectSelectedDate, selectTasksWithColor } from 'coopcycle-frontend-js/dispatch/redux'
+
 import { addressAsText } from '../utils'
 import TaskEta from './TaskEta'
 
@@ -14,6 +17,12 @@ moment.locale($('html').attr('lang'))
 const TaskCaption = ({ task, t }) => (
   <span>
     <span className="mr-1">#{ task.id }</span>
+    { (task.orgName && !_.isEmpty(task.orgName)) && (
+      <span>
+        <span className="font-weight-bold">{ task.orgName }</span>
+        <span className="mx-1">›</span>
+      </span>
+    ) }
     { t('ADMIN_DASHBOARD_TASK_CAPTION', {
       address: addressAsText(task.address),
       date: moment(task.before).format('LT')
@@ -194,11 +203,11 @@ function mapStateToProps(state, ownProps) {
   return {
     selected: -1 !== state.selectedTasks.indexOf(ownProps.task),
     color,
-    date: state.date,
+    date: selectSelectedDate(state),
     isVisible: selectIsVisibleTask({
       task: ownProps.task,
       filters: state.filters,
-      date: state.date,
+      date: selectSelectedDate(state),
     }),
   }
 }

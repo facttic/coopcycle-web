@@ -3,7 +3,7 @@
 namespace AppBundle\Action;
 
 use ApiPlatform\Core\Bridge\Symfony\Validator\Exception\ValidationException;
-use AppBundle\Entity\ApiUser;
+use AppBundle\Entity\User;
 use AppBundle\Form\ApiRegistrationType;
 use FOS\UserBundle\Mailer\MailerInterface;
 use FOS\UserBundle\Model\UserManagerInterface;
@@ -68,6 +68,7 @@ class Register
         $telephone = $request->request->get('_telephone');
         $givenName = $request->request->get('_givenName');
         $familyName = $request->request->get('_familyName');
+        $fullName = $request->request->get('_fullName');
 
         $data = [
             'email' => $email,
@@ -78,10 +79,11 @@ class Register
             ],
             'givenName' => $givenName,
             'familyName' => $familyName,
-            'telephone' => $telephone
+            'telephone' => $telephone,
+            'fullName' => $fullName,
         ];
 
-        $user = new ApiUser();
+        $user = $this->userManager->createUser();
 
         $form = $this->formFactory->create(ApiRegistrationType::class, $user);
         $form->submit($data);
@@ -106,8 +108,13 @@ class Register
             $user = $this->userManipulator->create($username, $password, $email, $enabled, false);
 
             $user->setTelephone($form->get('telephone')->getData());
-            $user->setGivenName($form->get('givenName')->getData());
-            $user->setFamilyName($form->get('familyName')->getData());
+
+            if (!empty($fullName)) {
+                $user->getCustomer()->setFullName($fullName);
+            } else {
+                $user->getCustomer()->setFirstName($form->get('givenName')->getData());
+                $user->getCustomer()->setLastName($form->get('familyName')->getData());
+            }
 
             $this->userManager->updateUser($user);
 

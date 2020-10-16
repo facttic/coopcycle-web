@@ -4,6 +4,8 @@ namespace AppBundle\Domain\Order\Reactor;
 
 use AppBundle\Domain\Order\Event;
 use AppBundle\Service\SocketIoManager;
+use AppBundle\Sylius\Customer\CustomerInterface;
+use Webmozart\Assert\Assert;
 
 class PublishToRedis
 {
@@ -21,8 +23,12 @@ class PublishToRedis
             $order = $event->getOrder();
             $customer = $order->getCustomer();
 
-            if (null !== $customer) {
-                $this->socketIoManager->toUserAndAdmins($customer, $event);
+            Assert::isInstanceOf($customer, CustomerInterface::class);
+
+            $this->socketIoManager->toOrderWatchers($order, $event);
+
+            if (null !== $customer && $customer->hasUser()) {
+                $this->socketIoManager->toUserAndAdmins($customer->getUser(), $event);
             } else {
                 $this->socketIoManager->toAdmins($event);
             }

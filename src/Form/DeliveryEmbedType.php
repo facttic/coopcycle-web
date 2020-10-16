@@ -2,8 +2,11 @@
 
 namespace AppBundle\Form;
 
+use AppBundle\Entity\PackageSet;
+use AppBundle\Entity\TimeSlot;
 use AppBundle\Service\RoutingInterface;
 use AppBundle\Service\SettingsManager;
+use Doctrine\ORM\EntityManagerInterface;
 use libphonenumber\PhoneNumberFormat;
 use Misd\PhoneNumberBundle\Form\Type\PhoneNumberType;
 use Symfony\Component\Form\AbstractType;
@@ -20,33 +23,9 @@ use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class DeliveryEmbedType extends DeliveryType
 {
-    private $settingsManager;
-
-    public function __construct(
-        RoutingInterface $routing,
-        TranslatorInterface $translator,
-        AuthorizationCheckerInterface $authorizationChecker,
-        string $country,
-        string $locale,
-        SettingsManager $settingsManager)
-    {
-        parent::__construct($routing, $translator, $authorizationChecker, $country, $locale);
-
-        $this->settingsManager = $settingsManager;
-    }
-
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
-        $options = array_merge($options, [
-            'with_vehicle' => $this->settingsManager->getBoolean('embed.delivery.withVehicle'),
-        ]);
-
         parent::buildForm($builder, $options);
-
-        $withWeight = $this->settingsManager->getBoolean('embed.delivery.withWeight');
-        if (!$withWeight) {
-            $builder->remove('weight');
-        }
 
         $builder
             ->add('name', TextType::class, [
@@ -75,6 +54,7 @@ class DeliveryEmbedType extends DeliveryType
                 'with_widget' => true,
                 'with_description' => false,
                 'label' => false,
+                'required' => false,
             ]);
 
         if ($options['with_payment']) {
@@ -95,18 +75,18 @@ class DeliveryEmbedType extends DeliveryType
             }
         });
 
-        $builder->addEventListener(FormEvents::POST_SET_DATA, function (FormEvent $event) {
+        $builder->addEventListener(FormEvents::POST_SUBMIT, function (FormEvent $event) {
 
             $form = $event->getForm();
 
-            // This is here to avoid a BC break since AddressBookType was introduced
-            // FIXME Use AddressBookType everywhere
+            $delivery = $form->getData();
+            $contactName = $form->get('name')->getData();
 
-            $form->get('pickup')->remove('address');
-            $form->get('dropoff')->remove('address');
-
-            $form->get('pickup')->add('address', AddressType::class);
-            $form->get('dropoff')->add('address', AddressType::class);
+            foreach ($delivery->getTasks() as $task) {
+                if (null !== $task->getAddress()) {
+                    $task->getAddress()->setContactName($contactName);
+                }
+            }
         });
     }
 
