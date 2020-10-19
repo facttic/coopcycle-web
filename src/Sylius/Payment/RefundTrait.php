@@ -7,6 +7,21 @@ use Stripe\Refund as StripeRefund;
 
 trait RefundTrait
 {
+    private function applyRefund($refund)
+    {
+        $refunds = [];
+        if (isset($this->details['refunds'])) {
+            $refunds = $this->details['refunds'];
+        }
+
+        $refunds[] = [
+            'id' => $refund->id,
+            'amount' => $refund->amount,
+        ];
+
+        $this->details = array_merge($this->details, ['refunds' => $refunds]);
+    }
+
     public function addRefund(int $amount, string $liableParty, string $comments = '')
     {
         $refund = new Refund();
@@ -20,19 +35,27 @@ trait RefundTrait
         return $refund;
     }
 
+    public function addGatewayRefund( $refund, $gateway )
+    {
+        switch ($gateway) {
+            case 'mercadopago':
+                $this->addMercadoPagoRefund($refund);
+                break;
+            case 'stripe':
+            default:
+                $this->addStripeRefund($refund);
+                break;
+        }
+    }
+
+    public function addMercadoPagoRefund( $refund )
+    {
+        $this->applyRefund($refund);
+    }
+
     public function addStripeRefund(StripeRefund $refund)
     {
-        $refunds = [];
-        if (isset($this->details['refunds'])) {
-            $refunds = $this->details['refunds'];
-        }
-
-        $refunds[] = [
-            'id' => $refund->id,
-            'amount' => $refund->amount,
-        ];
-
-        $this->details = array_merge($this->details, ['refunds' => $refunds]);
+        $this->applyRefund($refund);
     }
 
     public function hasRefunds()

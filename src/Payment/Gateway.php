@@ -31,6 +31,11 @@ class Gateway
 
                 $payment->setCharge($p->id);
 
+                $payment->setMercadopagoPreference([
+                    'mercadopago_preference_id' => null,
+                    'mercadopago_payment_id'    => $p->id
+                ]);
+
                 return new MercadopagoResponse($p);
             case 'stripe':
             default:

@@ -56,14 +56,16 @@ class RefundHandler
 
         switch ($gateway) {
             case 'mercadopago':
-                $refund = $this->mercadopagoManager->refund($payment, $amount);
+                $manager = $this->mercadopagoManager;
                 break;
 
             case 'stripe':
             default:
-                $refund = $this->stripeManager->refund($payment, $amount);
+                $manager = $this->stripeManager;
                 break;
         }
+
+        $refund = $manager->refund($payment, $amount);
 
         if ($payment->getState() === 'refunded_partially' && $transition !== 'refund_partially') {
             $stateMachine->apply($transition);
@@ -71,8 +73,10 @@ class RefundHandler
 
         $ref = $payment->addRefund($amount, $liableParty, $comments);
 
-        $ref->setData(['stripe_refund_id' => $refund->id]);
-        $payment->addStripeRefund($refund);
+        $refund_id_key = $gateway . "_refund_id";
+        $ref->setData([ $refund_id_key => $refund->id]);
+
+        $payment->addGatewayRefund( $refund, $gateway);
 
         // TODO Record event
     }

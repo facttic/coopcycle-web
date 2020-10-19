@@ -131,22 +131,35 @@ class MercadopagoManager
         $options['custom_access_token'] = $account->getAccessToken();
 
         // MercadoPago Payment
-        // $mPayment = MercadoPago\Payment::read(["id" => $payment->getCharge()], ["custom_access_token" => $options['custom_access_token']]);   
+        // $mPayment = MercadoPago\Payment::read(["id" => $payment->getCharge()], ["custom_access_token" => $options['custom_access_token']]);
         $mPayment = MercadoPago\Payment::find_by_id($payment->getCharge());
+        $refunds = null;
 
         if ( ($mPayment->status === "pending") || ($mPayment->status === "in_process") ) { // you can cancel the order
             $mPayment->status = "cancelled";
-            $mPayment->update();
+            $refunds = $mPayment->update();
 
         } elseif ($mPayment->status === "approved") { // you need to refund
-            $mPayment->refund();
+            $refunds = $mPayment->refund();
         }
 
-        dump($mPayment);
-        dump($mPayment->error);
-        dump($payment);
-            
-        exit();
-        return $refund;
+        // FIXME fake response
+
+        $fakeResponse = [
+            "id" => 666777,
+            "payment_id" =>  $payment->getCharge(),
+            "amount"=> 73.48,
+            "metadata"=> [],
+            "source" => [
+                "id"=> "130379930",
+                "name"=> "Firstname Lastname",
+                "type"=> "collector"
+            ],
+            "date_created"=> "2014-12-11T11:26:40.537-04:00"
+        ];
+
+        $refunds = json_decode(json_encode($fakeResponse));
+
+        return $refunds; //refund coopcycle
     }
 }

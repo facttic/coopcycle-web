@@ -56,6 +56,8 @@ class Pay
                 }
 
                 $payment = new Payment();
+                $payment->setCharge($body['mercadopagoPaymentId']);
+                
                 $payment->setMercadopagoPreference([
                     'mercadopago_preference_id' => $body['mercadopagoPreferenceId'],
                     'mercadopago_payment_id'    => $body['mercadopagoPaymentId']
