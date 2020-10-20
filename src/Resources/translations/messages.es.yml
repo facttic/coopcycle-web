@@ -413,13 +413,17 @@ form.local_business.stripe_account.link_ok: "Éste restaurante ha sido enlazado 
   \ cuenta Stripe y puede recibir pagos de la plataforma.<br>\nPara gestionar tu cuenta\
   \ Stripe por favor usa el <a href=\"https://dashboard.stripe.com/\" target=\"_blank\"\
   >panel de administración de Stripe</a>.\n"
-form.settings.mercadopago.title: Mercado Pago
+form.settings.mercadopago.title: MercadoPago
 form.local_business.mercadopago_account.title: Cuenta de MercadoPago
 form.local_business.mercadopago_account.success: Cuenta MercadoPago conectada con éxito
+form.local_business.mercadopago_account.unlink.success: Cuenta MercadoPago desvinculada con éxito
+form.local_business.mercadopago_account.unlink.error: Algo ocurrio, la cuenta MercadoPago no se ha desvinculado.
+form.local_business.mercadopago_account.unlink.error_pending_orders: Este restaurant tiene órdenes pendientes, no se puede devincular la cuenta de MercadoPago.
 form.local_business.mercadopago.connect_button.text: Conectar con MercadoPago
-form.mercadopago_livemode.enable.label: Utilizar Mercadopago en modo « producción »
+form.local_business.mercadopago.disconnect_button.text: Desconectar de MercadoPago
+form.mercadopago_livemode.enable.label: Utilizar MercadoPago en modo « producción »
 form.mercadopago_livemode.enable.alert: En modo « producción », las tarjetas de crédito serán cargadas.
-form.mercadopago_livemode.disable.label: Utilizar Mercadopago en modo « test »
+form.mercadopago_livemode.disable.label: Utilizar MercadoPago en modo « test »
 form.mercadopago_livemode.disable.alert: En modo « test », las tarjetas de crédito no serán cargadas.
 form.mercadopago_livemode.disable_and_enable_maintenance.label: Utilizar el modo « test » y activar el mantenimiento
 form.mercadopago_livemode.disable_and_enable_maintenance.alert: Estás utilizando el modo « live ».<br>Si quiere pasar en modo « test », el mantenimiento se activará automáticamente.

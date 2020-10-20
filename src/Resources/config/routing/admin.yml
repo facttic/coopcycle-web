@@ -377,6 +377,12 @@ admin_restaurant_mercadopago_oauth_redirect:
         redirect_after: admin_restaurant
     methods: [ GET ]
 
+admin_restaurant_mercadopago_unlink:
+    path: /admin/restaurants/{id}/mercadopago-unlink
+    defaults:
+        _controller: AppBundle\Controller\AdminController::mercadoPagoUnlinkAction
+        redirect_after: admin_restaurant
+    methods: [ GET ]
 
 admin_order_cancel:
     path: /admin/orders/{id}/cancel

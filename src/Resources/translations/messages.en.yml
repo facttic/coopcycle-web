@@ -131,7 +131,7 @@ localBusiness.form.description: Description
 localBusiness.form.legalName: Legal name
 localBusiness.form.website: Website
 localBusiness.form.telephone: Telephone
-localBusiness.form.telephone.help: "E.g. Country code: %cc% Number: %phone%"
+localBusiness.form.telephone.help: "Example: Country code: %cc% Number: %phone%"
 localBusiness.form.openingHours: Opening hours
 localBusiness.form.deliveryPerimeterExpression: Zone or max distance for delivery
 localBusiness.form.shippingOptionsDays: Number of shipping choices (in days)
@@ -312,6 +312,10 @@ order.total_tax: VAT
 order.total_tax_by_rate: Total %name%
 order.preparation_expected_at: Preparation expected at %date%
 order.shipping_date.title: Your shipping date
+order.payer.title: Buyer information
+order.payer.email: E-mail
+order.payer.identificationType: ID type
+order.payer.identificationNumber: Identification number
 order.payment.title: Your payment information
 order.payment.expiration.label: Expiration
 order.payment.month.label: Month
@@ -453,7 +457,10 @@ form.order.refund_modal.title: Refund
 form.order.refuse.refund.alert: This order was paid with a payment method that does
   not manage pre-authorizations. If you refuse it, the payment will be refunded. Are
   you sure?
-form.payment.refund_amount.label: Amount
+form.payment.state.label: State
+form.payment.amount.label: Amount
+form.payment.refund_amount.label: Refunded Amount
+form.payment.last_update.label: Last update
 form.payment.refund_amount.help: The amount you specify will be refunded to the customer
 form.payment.refund_liable.label: Liable party
 form.payment.refund_liable.help: Which party is liable for the incident?
@@ -602,12 +609,15 @@ form.local_business.stripe_account.link_ok: "This restaurant is linked to a Stri
   \ account and can receive payments from the platform.<br>\nTo manage your Stripe\
   \ account and the transfers to your account, please use the <a href=\"https://dashboard.stripe.com/\"\
   \ target=\"_blank\">Stripe dashboard</a>.\n"
-form.settings.mercadopago.title: Mercado Pago
+form.settings.mercadopago.title: MercadoPago
 form.local_business.mercadopago_account.title: MercadoPago Account
-form.local_business.mercadopago_account.success: MercadoPago account successfully
-  connected
-form.local_business.mercadopago.connect_button.text: Connect with Mercado Pago
-form.mercadopago_livemode.enable.label: Use Mercadopago in « live » mode
+form.local_business.mercadopago_account.success: MercadoPago account successfully connected
+form.local_business.mercadopago_account.unlinked.success: MercadoPago account unlinked successfuly
+form.local_business.mercadopago_account.unlink.error: Something happened, MercadoPago account could not be unlinked.
+form.local_business.mercadopago_account.unlink.error_pending_orders: This restaurant has pending orders, MercadoPago account cannot be unlinked.
+form.local_business.mercadopago.connect_button.text: Connect with MercadoPago
+form.local_business.mercadopago.disconnect_button.text: Disconnect from MercadoPago.
+form.mercadopago_livemode.enable.label: Use MercadoPago in « live » mode
 form.mercadopago_livemode.enable.alert: In « live » mode, credit cards will be charged.
 form.mercadopago_livemode.disable.label: Use Mercadopago in « test » mode
 form.mercadopago_livemode.disable.alert: In « test » mode, credit cards will not be

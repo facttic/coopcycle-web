@@ -15,6 +15,11 @@
         <span class="text-success">
           <i class="fa fa-check"></i>
         </span>
+
+        <a href="{{ path(mercadopago_unlink_route, { id: restaurant.id, livemode: 'no'}) }}" class="btn btn-sm mercadopago-connect">
+          <span>{{ 'form.local_business.mercadopago.disconnect_button.text'|trans }}</span>
+        </a>
+        
       {% else %}
         <a href="{{ path(mercadopago_oauth_redirect_route, { id: restaurant.id, livemode: 'no'}) }}" class="btn btn-sm mercadopago-connect">
           <span>{{ 'form.local_business.mercadopago.connect_button.text'|trans }}</span>
@@ -23,4 +28,5 @@
     </td>
   </tr>
   {# TODO Allow connecting live account #}
+  
 </table>
