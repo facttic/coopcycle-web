@@ -123,7 +123,6 @@
 {% block scripts %}
 {% if not order.empty %}
 
-{% set gateway = payment_gateway_resolver.resolve() %}
 {% set gateway_configs = {} %}
 
 {% if gateway == 'stripe' %}
@@ -137,12 +136,12 @@
 
 {% if gateway == 'mercadopago' %}
 <script src="https://secure.mlstatic.com/sdk/javascript/v1/mercadopago.js"></script>
+{# FIXME #}
+{# Probably the gateway resolver could return a configuration object with this information - @sgobotta #}
 {% set gateway_configs = gateway_configs|merge({
   mercadopago: {
     publishableKey: coopcycle_setting('mercadopago_test_publishable_key'),
     country: country,
-    // FIXME
-    // Probably the gateway resolver could return a configuration object with this information - @sgobotta
     countriesWithIdentificationTypes: ['ar']
   }
 }) %}

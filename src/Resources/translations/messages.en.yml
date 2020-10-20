@@ -131,6 +131,7 @@ localBusiness.form.description: Description
 localBusiness.form.legalName: Legal name
 localBusiness.form.website: Website
 localBusiness.form.telephone: Telephone
+localBusiness.form.telephone.help: "E.g. Country code: %cc% Number: %phone%"
 localBusiness.form.openingHours: Opening hours
 localBusiness.form.deliveryPerimeterExpression: Zone or max distance for delivery
 localBusiness.form.shippingOptionsDays: Number of shipping choices (in days)
@@ -928,6 +929,7 @@ form.min_max.infinity.label: No maximum
 form.local_business.iso_code.fr.siret: SIRET number
 form.local_business.iso_code.fr.vat_number: VAT number
 form.local_business.iso_code.fr.rcs_number: RCS number
+form.local_business.iso_code.ar.cuit: CUIT/CUIL number
 receipt.title: 'Receipt of your order #%number%'
 receipt.line_item.name: Product
 receipt.line_item.unit_price: Unit price

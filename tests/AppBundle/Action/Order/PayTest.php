@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 use Prophecy\PhpUnit\ProphecyTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use AppBundle\Service\MercadopagoManager;
 
 class PayTest extends TestCase
 {
@@ -21,12 +22,13 @@ class PayTest extends TestCase
 
         $doctrine = $this->prophesize(ManagerRegistry::class);
         $orderManager = $this->prophesize(OrderManager::class);
+        $mercadopagoManager = $this->prophesize(MercadopagoManager::class);
 
         $order = new Order();
 
         $request = Request::create('/foo');
 
-        $pay = new Pay($orderManager->reveal(), $doctrine->reveal());
+        $pay = new Pay($orderManager->reveal(), $doctrine->reveal(), $mercadopagoManager->reveal());
 
         $response = call_user_func_array($pay, [$order, $request]);
     }
