@@ -12,7 +12,7 @@
 
   {% include "embed/delivery/breadcrumb.html.twig" %}
 
-  {{ form_start(form, { action: path('embed_delivery_summary'), attr: {  autocomplete: 'off' } }) }}
+  {{ form_start(form, { action: path('embed_delivery_summary', { hashid: hashid }), attr: {  autocomplete: 'off' } }) }}
 
     {{ form_errors(form) }}
 
@@ -57,6 +57,10 @@
   {% include "embed/delivery/footer.html.twig" %}
 
 </div>
+{% endblock %}
+
+{% block styles %}
+  {{ encore_entry_link_tags('delivery-embed-start-form') }}
 {% endblock %}
 
 {% block scripts %}

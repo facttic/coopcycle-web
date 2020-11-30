@@ -87,6 +87,7 @@ services:
 
   League\Flysystem\Filesystem $taskImportsFilesystem: '@task_imports_filesystem'
   League\Flysystem\Filesystem $receiptsFilesystem: '@receipts_filesystem'
+  FOS\UserBundle\Util\CanonicalizerInterface: '@fos_user.util.canonicalizer.default'
 
   AppBundle\Routing\FoodtechEnabledAwareLoader:
     arguments:
@@ -96,6 +97,8 @@ services:
   AppBundle\Controller\OrderController:
     arguments:
       $objectManager: '@sylius.manager.order'
+      $orderFactory: '@sylius.factory.order'
+      $sessionKeyName: "%sylius_cart_restaurant_session_key_name%"
     tags:
       - { name: monolog.logger, channel: stripe }
 
@@ -119,7 +122,9 @@ services:
       - { name: csa_guzzle.client }
       - { name: monolog.logger, channel: loopeat }
 
-  AppBundle\LoopEat\Context: ~
+  AppBundle\LoopEat\Context:
+    tags:
+      - { name: monolog.logger, channel: loopeat }
 
   AppBundle\Controller\RestaurantController:
     arguments:
@@ -140,6 +145,9 @@ services:
       $loopeatBaseUrl: '%loopeat_base_url%'
       $loopeatClientId: '%loopeat_client_id%'
       $loopeatClientSecret: '%loopeat_client_secret%'
+      $loopeatOAuthFlow: '%env(LOOPEAT_OAUTH_FLOW)%'
+    tags:
+      - { name: monolog.logger, channel: loopeat }
 
   AppBundle\Controller\PaymentController:
     arguments:
@@ -550,6 +558,9 @@ services:
         - '@translator'
     tags: [ 'kernel.event_subscriber' ]
 
+  AppBundle\Api\EventSubscriber\TaskOrganizationSubscriber:
+    tags: [ 'kernel.event_subscriber' ]
+
   AppBundle\Action\Settings:
     public: true
     arguments:
@@ -640,6 +651,15 @@ services:
       - '@sylius.repository.channel'
     tags:
       - { name: 'sylius.context.channel', priority: -64 }
+
+  AppBundle\Sylius\Channel\ProChannelContext:
+    tags:
+      - { name: 'sylius.context.channel', priority: 128 }
+
+
+  AppBundle\EventListener\ChangeChannelListener:
+    tags:
+      - { name: kernel.event_listener, event: kernel.response }
 
   AppBundle\EventSubscriber\ApiLogSubscriber:
     tags:
@@ -832,3 +852,19 @@ services:
         - mx
 
   AppBundle\Payment\Gateway: ~
+
+  AppBundle\Security\ProVoter:
+    tags: [ 'security.voter' ]
+
+  AppBundle\EventSubscriber\RegistrationInitializeListener:
+    arguments:
+      $orderRepository: '@sylius.repository.order'
+      $secret: '%secret%'
+
+  AppBundle\Embed\Context: ~
+
+  AppBundle\Security\DeleteClosingRuleVoter:
+    tags: [ 'security.voter' ]
+
+  AppBundle\Security\OrderActionsVoter:
+    tags: [ 'security.voter' ]

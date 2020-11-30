@@ -32,8 +32,9 @@ migrations-migrate:
 email-preview:
 	@docker-compose exec php php bin/console coopcycle:email:preview > /tmp/coopcycle_email_layout.html && open /tmp/coopcycle_email_layout.html
 
-dev:
-	@docker-compose -f docker-compose.dev.yml up
+enable-xdebug:
+	@docker-compose exec php /usr/local/bin/enable-xdebug
+	@docker-compose restart php nginx
 
-devd:
-	@docker-compose -f docker-compose.dev.yml up -d
+fresh:
+	@docker-compose down

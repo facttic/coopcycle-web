@@ -18,7 +18,7 @@ class SettingsManager
     private $country;
     private $doctrine;
     private $logger;
-    private $gatewayResolver; 
+    private $gatewayResolver;
 
     private $mandatorySettings = [
         'brand_name',
@@ -42,6 +42,12 @@ class SettingsManager
         'mercadopago_live_publishable_key',
         'mercadopago_test_access_token',
         'mercadopago_live_access_token',
+    ];
+
+    private static $boolean = [
+        'sms_enabled',
+        'subject_to_vat',
+        'guest_checkout_enabled',
     ];
 
     private $cache = [];
@@ -116,10 +122,10 @@ class SettingsManager
                         $value = $this->phoneNumberUtil->parse($value, strtoupper($this->country));
                     } catch (NumberParseException $e) {}
                     break;
-                case 'sms_enabled':
-                case 'subject_to_vat':
-                    $value = (bool) $value;
-                    break;
+            }
+
+            if (in_array($name, self::$boolean)) {
+                $value = (bool) $value;
             }
 
             $this->cache[$name] = $value;
@@ -219,7 +225,7 @@ class SettingsManager
 
         $smsGateway = $this->get('sms_gateway');
 
-        if ('mailjet' !== $smsGateway) {
+        if (!$smsGateway || !in_array($smsGateway, ['mailjet', 'twilio'])) {
 
             return false;
         }
@@ -238,14 +244,19 @@ class SettingsManager
             return false;
         }
 
-        $whitelist = ['be', 'es', 'de', 'fr'];
-
-        if (!in_array($this->country, $whitelist)) {
-
-            return false;
+        switch ($smsGateway) {
+            case 'mailjet':
+                return in_array($this->country, ['be', 'es', 'de', 'fr'])
+                    && isset($smsGatewayConfig['api_token']);
+            case 'twilio':
+                return isset(
+                    $smsGatewayConfig['sid'],
+                    $smsGatewayConfig['auth_token'],
+                    $smsGatewayConfig['from']
+                );
         }
 
-        return isset($smsGatewayConfig['api_token']);
+        return false;
     }
 
     public function set($name, $value, $section = null)
@@ -313,11 +324,7 @@ class SettingsManager
             try {
                 $value = $this->craueConfig->get($name);
 
-                if ($name === 'sms_enabled') {
-                    $value = (bool) $value;
-                }
-
-                if ($name === 'subject_to_vat') {
+                if (in_array($name, self::$boolean)) {
                     $value = (bool) $value;
                 }
 

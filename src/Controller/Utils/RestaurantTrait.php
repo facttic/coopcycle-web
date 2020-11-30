@@ -8,6 +8,7 @@ use AppBundle\Entity\ClosingRule;
 use AppBundle\Entity\Contract;
 use AppBundle\Entity\Cuisine;
 use AppBundle\Entity\LocalBusiness;
+use AppBundle\Entity\RestaurantMercadopagoAccount;
 use AppBundle\Entity\Restaurant\PreparationTimeRule;
 use AppBundle\Entity\ReusablePackaging;
 use AppBundle\Entity\StripeAccount;
@@ -587,10 +588,12 @@ trait RestaurantTrait
 
         if ($form->isSubmitted() && $form->isValid()) {
             $closingRule = $form->getData();
-            $closingRule->setRestaurant($restaurant);
-            $manager = $this->getDoctrine()->getManagerForClass(ClosingRule::class);
-            $manager->persist($closingRule);
-            $manager->flush();
+            $restaurant->addClosingRule($closingRule);
+
+            $this->getDoctrine()
+                ->getManagerForClass(LocalBusiness::class)
+                ->flush();
+
             $this->addFlash(
                 'notice',
                 $this->get('translator')->trans('global.changesSaved')
@@ -1288,5 +1291,99 @@ trait RestaurantTrait
         // TODO Implement
 
         throw $this->createNotFoundException();
+    }
+
+    /**
+     * Revoke user authorization
+     * See https://developers.mercadolibre.com.ar/es_ar/gestiona-tus-aplicaciones 
+     */
+    public function mercadoPagoUnlinkAction($id, Request $request, MercadopagoManager $mercadopagoManager, SettingsManager $settingsManager)
+    {
+        $routes = $this->getRestaurantRoutes();
+
+        $restaurantMercadopagoAccounts = $this->getDoctrine()
+            ->getRepository(RestaurantMercadopagoAccount::class)
+            ->findOneByRestaurant($id);
+
+        $mercadopagoAccount = $restaurantMercadopagoAccounts->getMercadopagoAccount();
+
+        $mercadopagoManager->configure();
+
+        $restaurant = $restaurantMercadopagoAccounts->getRestaurant();
+        $orders = $restaurant->getOrders();
+
+        $pendingOrders=false;
+
+        foreach ($orders as $key => $ordervalue) {
+
+            $states = array("new", "accepted");
+
+            if (in_array($ordervalue->getState(), $states)) {
+                $pendingOrders = true;
+                break;
+            }
+        }
+
+
+        if ( $orders->isEmpty() or !$pendingOrders) { # no pending orders
+
+            // request to Mercadopago
+            // curl -X DELETE https://api.mercadolibre.com/users/$USER_ID/applications/$APP_ID?access_token=$ACCESS_TOKEN
+            $USER_ID        = $mercadopagoAccount->getUserId();
+            $ACCESS_TOKEN   = $mercadopagoAccount->getAccessToken();
+            $APP_ID         = $settingsManager->get('mercadopago_app_id');
+            $url = "https://api.mercadolibre.com/users/{$USER_ID}/applications/{$APP_ID}?access_token={$ACCESS_TOKEN}";
+            
+            // curl delete
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+            
+            $curl_result = json_decode(curl_exec($ch), true);
+            $curl_httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            
+            curl_close($ch); // do not forget
+
+            if ($curl_httpCode !== 200 ) { // error
+                
+                $this->addFlash(
+                    'error',
+                    $curl_result['message'] ." ".  $curl_result['error']
+                );
+            
+            } elseif ($curl_httpCode === 200) {
+                
+                // $restaurant = $restaurantMercadopagoAccounts->getRestaurant();
+                $restaurant->setEnabled(false);
+                
+                // remove from DB
+                $em = $this->getDoctrine()->getManager();
+                
+                $em->remove($restaurantMercadopagoAccounts);
+                $em->remove($mercadopagoAccount);
+                $em->flush();
+                
+                $this->addFlash(
+                    'notice',
+                    $this->get('translator')->trans('form.local_business.mercadopago_account.unlink.success')
+                );
+
+            } else {
+                $this->addFlash(
+                    'warning',
+                    $this->get('translator')->trans('form.local_business.mercadopago_account.unlink.error')
+                );
+            }
+
+        } else { # pending orders
+            $this->addFlash(
+                'error',
+                $this->get('translator')->trans('form.local_business.mercadopago_account.unlink.error_pending_orders')
+            );
+        }
+
+        return $this->redirectToRoute($routes['restaurant'], ['id' => $id]);
     }
 }

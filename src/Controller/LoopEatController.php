@@ -3,18 +3,22 @@
 namespace AppBundle\Controller;
 
 use ApiPlatform\Core\Api\IriConverterInterface;
-use AppBundle\Entity\ApiUser;
 use AppBundle\Entity\LocalBusiness;
+use AppBundle\Entity\Sylius\Customer;
+use AppBundle\Entity\Sylius\Order;
 use AppBundle\LoopEat\Client as LoopEatClient;
 use Doctrine\ORM\EntityManagerInterface;
-use FOS\UserBundle\Model\UserManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 use Psr\Log\LoggerInterface;
+use Sylius\Component\Order\Context\CartContextInterface;
+use Sylius\Component\Order\Processor\OrderProcessorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class LoopEatController extends AbstractController
 {
@@ -22,11 +26,13 @@ class LoopEatController extends AbstractController
         string $loopeatBaseUrl,
         string $loopeatClientId,
         string $loopeatClientSecret,
+        string $loopeatOAuthFlow,
         LoggerInterface $logger)
     {
         $this->loopeatBaseUrl = $loopeatBaseUrl;
         $this->loopeatClientId = $loopeatClientId;
         $this->loopeatClientSecret = $loopeatClientSecret;
+        $this->loopeatOAuthFlow = $loopeatOAuthFlow;
         $this->logger = $logger;
     }
 
@@ -90,8 +96,9 @@ class LoopEatController extends AbstractController
         Request $request,
         JWTEncoderInterface $jwtEncoder,
         IriConverterInterface $iriConverter,
-        UserManagerInterface $userManager,
-        EntityManagerInterface $objectManager)
+        EntityManagerInterface $objectManager,
+        SessionInterface $session,
+        TranslatorInterface $translator)
     {
         if (!$request->query->has('state')) {
             throw $this->createAccessDeniedException();
@@ -111,8 +118,9 @@ class LoopEatController extends AbstractController
 
         $subject = $iriConverter->getItemFromIri($payload['sub']);
 
-        if (!$subject instanceof LocalBusiness && !$subject instanceof ApiUser) {
-            throw new BadRequestHttpException(sprintf('Subject should be an instance of "%s" or "%s"', LocalBusiness::class, ApiUser::class));
+        if (!$subject instanceof LocalBusiness && !$subject instanceof Customer && !$subject instanceof Order) {
+            throw new BadRequestHttpException(sprintf('Subject should be an instance of "%s" or "%s" or "%s"',
+                LocalBusiness::class, Customer::class, Order::class));
         }
 
         if (!$request->query->has('code') && !$request->query->has('error')) {
@@ -132,18 +140,25 @@ class LoopEatController extends AbstractController
             return $this->redirect($this->getFailureRedirect($payload));
         }
 
-        $subject->setLoopeatAccessToken($data['access_token']);
-        $subject->setLoopeatRefreshToken($data['refresh_token']);
-
-        if ($subject instanceof ApiUser) {
-            $userManager->updateUser($subject);
+        // This happens for guest checkout
+        if ($subject instanceof Order && null !== $subject->getCustomer()) {
+            $subject = $subject->getCustomer();
         }
 
-        if ($subject instanceof LocalBusiness) {
+        // If the customer is not defined yet,
+        // we store the credentials in session
+        // they will be attached to customer later
+        if ($subject instanceof Order) {
+            $this->logger->info(sprintf('Storing LoopEat credentials for order #%d in session', $subject->getId()));
+            $session->set(sprintf('loopeat.order.%d.access_token', $subject->getId()), $data['access_token']);
+            $session->set(sprintf('loopeat.order.%d.refresh_token', $subject->getId()), $data['refresh_token']);
+        } else {
+            $subject->setLoopeatAccessToken($data['access_token']);
+            $subject->setLoopeatRefreshToken($data['refresh_token']);
             $objectManager->flush();
         }
 
-        $this->addFlash('notice', 'LoopEat account connected successfully!');
+        $this->addFlash('notice', $translator->trans('loopeat.oauth_connect.success'));
 
         return $this->redirect($this->getSuccessRedirect($payload));
     }
@@ -151,9 +166,29 @@ class LoopEatController extends AbstractController
     /**
      * @Route("/loopeat/success", name="loopeat_success")
      */
-    public function successAction(Request $request)
+    public function successAction(Request $request,
+        CartContextInterface $cartContext,
+        OrderProcessorInterface $orderProcessor,
+        EntityManagerInterface $objectManager)
     {
-        return $this->render('loopeat/post_message.html.twig', ['loopeat_success' => true]);
+        if ('iframe' === $this->loopeatOAuthFlow) {
+            return $this->render('loopeat/post_message.html.twig', ['loopeat_success' => true]);
+        }
+
+        $cart = $cartContext->getCart();
+
+        if (null === $cart) {
+
+            return $this->redirectToRoute('homepage');
+        }
+
+        $cart->setReusablePackagingEnabled(true);
+
+        $orderProcessor->process($cart);
+
+        $objectManager->flush();
+
+        return $this->redirectToRoute('order');
     }
 
     /**
@@ -161,6 +196,10 @@ class LoopEatController extends AbstractController
      */
     public function failureAction(Request $request)
     {
-        return $this->render('loopeat/post_message.html.twig', ['loopeat_success' => false]);
+        if ('iframe' === $this->loopeatOAuthFlow) {
+            return $this->render('loopeat/post_message.html.twig', ['loopeat_success' => false]);
+        }
+
+        return $this->redirectToRoute('order');
     }
 }

@@ -21,7 +21,6 @@ services:
 
   AppBundle\Form\RegistrationType:
     arguments:
-      $countryIso: '%country_iso%'
       $isDemo: '%is_demo%'
     tags:
       - { name: form.type }
@@ -55,8 +54,6 @@ services:
     parent: AppBundle\Form\DeliveryType
     autowire: false
     autoconfigure: false
-    arguments:
-      $settingsManager: '@coopcycle.settings_manager'
     tags: [ form.type ]
 
   AppBundle\Form\NewOrderType:
@@ -122,7 +119,13 @@ services:
 
   AppBundle\Form\Checkout\CheckoutAddressType:
     arguments:
-      $country: '%country_iso%'
+      $loopeatOAuthFlow: '%env(LOOPEAT_OAUTH_FLOW)%'
+    tags: [ form.type ]
+
+  AppBundle\Form\Checkout\CheckoutCustomerType:
+    arguments:
+      $customerFactory: '@sylius.factory.customer'
+      $customerRepository: '@sylius.repository.customer'
     tags: [ form.type ]
 
   AppBundle\Form\ApiAppType:
@@ -204,4 +207,15 @@ services:
     tags: [ form.type ]
 
   AppBundle\Form\TagsType:
+    tags: [ form.type ]
+
+  AppBundle\Form\AttachToOrganizationType:
+    tags: [ form.type ]
+
+  AppBundle\Form\Type\PhoneNumberType:
+    arguments:
+      $country: '%region_iso%'
+    tags: [ form.type ]
+
+  AppBundle\Form\Type\LegalType:
     tags: [ form.type ]

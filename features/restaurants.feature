@@ -72,7 +72,6 @@ Feature: Manage restaurants
             }
           ],
           "specialOpeningHoursSpecification":[],
-          "availabilities":"@*@",
           "image":@string@,
           "fulfillmentMethods":@array@
         }
@@ -230,11 +229,11 @@ Feature: Manage restaurants
       | sylius_locales.yml  |
       | products.yml        |
       | restaurants.yml     |
-    And the restaurant with id "3" has products:
+    And the restaurant with id "6" has products:
       | code      |
       | PIZZA     |
       | HAMBURGER |
-    And the restaurant with id "3" has menu:
+    And the restaurant with id "6" has menu:
       | section | product   |
       | Pizzas  | PIZZA     |
       | Burger  | HAMBURGER |
@@ -244,10 +243,10 @@ Feature: Manage restaurants
       | telephone  | 0033612345678     |
     And the setting "default_tax_category" has value "tva_livraison"
     And the setting "subject_to_vat" has value "1"
-    Given the user "bob" has ordered something for "2018-08-27 12:30:00" at the restaurant with id "3"
+    Given the user "bob" has ordered something for "2018-08-27 12:30:00" at the restaurant with id "6"
     And the user "bob" is authenticated
     When I add "Accept" header equal to "application/ld+json"
-    And the user "bob" sends a "GET" request to "/api/restaurants/3"
+    And the user "bob" sends a "GET" request to "/api/restaurants/6"
     Then the response status code should be 404
 
   Scenario: Retrieve a restaurant's menu
@@ -721,3 +720,20 @@ Feature: Manage restaurants
         "hydra:totalItems":1
       }
       """
+
+  Scenario: Delete closing rule
+    Given the fixtures files are loaded:
+      | sylius_channels.yml |
+      | sylius_locales.yml  |
+      | restaurants.yml     |
+    And the restaurant with id "1" is closed between "2018-08-27 12:00:00" and "2018-08-28 10:00:00"
+    Given the user "bob" is loaded:
+      | email      | bob@coopcycle.org |
+      | password   | 123456            |
+    And the user "bob" has role "ROLE_RESTAURANT"
+    And the restaurant with id "1" belongs to user "bob"
+    And the user "bob" is authenticated
+    And I add "Accept" header equal to "application/ld+json"
+    And I add "Content-Type" header equal to "application/ld+json"
+    When the user "bob" sends a "DELETE" request to "/api/opening_hours_specifications/1"
+    Then the response status code should be 204

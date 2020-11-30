@@ -37,7 +37,6 @@ class CheckoutPaymentType extends AbstractType
 
         // @see https://www.mercadopago.com.br/developers/en/guides/payments/api/receiving-payment-by-card/
         if ('mercadopago' === $this->resolver->resolve()) {
-
             $builder
                 ->add('paymentMethod', HiddenType::class, [
                     'mapped' => false,

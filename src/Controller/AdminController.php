@@ -10,9 +10,11 @@ use AppBundle\Controller\Utils\RestaurantTrait;
 use AppBundle\Controller\Utils\StoreTrait;
 use AppBundle\Controller\Utils\UserTrait;
 use AppBundle\Entity\ApiApp;
-use AppBundle\Entity\ApiUser;
+use AppBundle\Entity\User;
 use AppBundle\Entity\Delivery;
+use AppBundle\Entity\DeliveryForm;
 use AppBundle\Entity\Delivery\PricingRuleSet;
+use AppBundle\Entity\Hub;
 use AppBundle\Entity\Invitation;
 use AppBundle\Entity\LocalBusiness;
 use AppBundle\Entity\Organization;
@@ -20,18 +22,22 @@ use AppBundle\Entity\OrganizationConfig;
 use AppBundle\Entity\PackageSet;
 use AppBundle\Entity\Restaurant\Pledge;
 use AppBundle\Entity\Store;
+use AppBundle\Entity\Sylius\Customer;
 use AppBundle\Entity\Sylius\Order;
+use AppBundle\Entity\Sylius\OrderRepository;
 use AppBundle\Entity\Tag;
 use AppBundle\Entity\Task;
 use AppBundle\Entity\TimeSlot;
 use AppBundle\Entity\Zone;
 use AppBundle\Form\AddOrganizationType;
+use AppBundle\Form\AttachToOrganizationType;
 use AppBundle\Form\ApiAppType;
 use AppBundle\Form\BannerType;
 use AppBundle\Form\CustomizeType;
 use AppBundle\Form\DeliveryImportType;
 use AppBundle\Form\EmbedSettingsType;
 use AppBundle\Form\GeoJSONUploadType;
+use AppBundle\Form\HubType;
 use AppBundle\Form\InviteUserType;
 use AppBundle\Form\MaintenanceType;
 use AppBundle\Form\MercadopagoLivemodeType;
@@ -115,6 +121,7 @@ class AdminController extends Controller
             'product_option_preview' => 'admin_restaurant_product_option_preview',
             'reusable_packaging_new' => 'admin_restaurant_new_reusable_packaging',
             'mercadopago_oauth_redirect' => 'admin_restaurant_mercadopago_oauth_redirect',
+            'mercadopago_unlink' => 'admin_restaurant_mercadopago_unlink',
         ];
     }
 
@@ -164,6 +171,29 @@ class AdminController extends Controller
             ->getResult();
 
         return [ $orders, $pages, $page ];
+    }
+
+    /**
+     * @Route("/admin/orders/search", name="admin_orders_search")
+     */
+    public function searchOrdersAction(Request $request,
+        OrderRepository $orderRepository)
+    {
+        $results = $orderRepository->search($request->query->get('q'));
+
+        $data = [];
+        foreach ($results as $order) {
+            $data[] = [
+                'id' => $order->getId(),
+                'name' => sprintf('%s (%s)',
+                    $order->getNumber(),
+                    $order->getCustomer()->getEmailCanonical()
+                ),
+                'path' => $this->generateUrl('admin_order', ['id' => $order->getId()]),
+            ];
+        }
+
+        return new JsonResponse($data);
     }
 
     /**
@@ -326,50 +356,54 @@ class AdminController extends Controller
     public function usersAction(Request $request)
     {
         $qb = $this->getDoctrine()
-            ->getRepository(ApiUser::class)
-            ->createQueryBuilder('u');
+            ->getRepository(Customer::class)
+            ->createQueryBuilder('c');
 
-        $users = $this->get('knp_paginator')->paginate(
+        $qb->leftJoin(User::class, 'u', Expr\Join::WITH, 'c.id = u.customer');
+
+        $customers = $this->get('knp_paginator')->paginate(
             $qb,
             $request->query->getInt('page', 1),
             self::ITEMS_PER_PAGE,
             [
-                PaginatorInterface::DEFAULT_SORT_FIELD_NAME => 'u.id',
+                PaginatorInterface::DEFAULT_SORT_FIELD_NAME => 'c.id',
                 PaginatorInterface::DEFAULT_SORT_DIRECTION => 'desc',
-                PaginatorInterface::SORT_FIELD_WHITELIST => ['u.username', 'u.id'],
+                PaginatorInterface::SORT_FIELD_WHITELIST => ['u.username', 'c.id'],
                 PaginatorInterface::FILTER_FIELD_WHITELIST => ['u.roles', 'u.username']
             ]
         );
 
         $attributes = [];
 
-        foreach ($users as $user) {
+        foreach ($customers as $customer) {
+
+            $key = $customer->getEmailCanonical();
 
             $qb = $this->get('sylius.repository.order')->createQueryBuilder('o');
             $qb->andWhere('o.customer = :customer');
-            $qb->andWhere('o.state = :state');
-            $qb->setParameter('customer', $user);
-            $qb->setParameter('state', OrderInterface::STATE_FULFILLED);
+            $qb->andWhere('o.state != :state');
+            $qb->setParameter('customer', $customer);
+            $qb->setParameter('state', OrderInterface::STATE_CART);
 
             $res = $qb->getQuery()->getResult();
 
-            $attributes[$user->getUsername()]['orders_count'] = count($res);
+            $attributes[$key]['orders_count'] = count($res);
 
             $qb = $this->get('sylius.repository.order')->createQueryBuilder('o');
             $qb->andWhere('o.customer = :customer');
-            $qb->andWhere('o.state = :state');
-            $qb->setParameter('customer', $user);
-            $qb->setParameter('state', OrderInterface::STATE_FULFILLED);
+            $qb->andWhere('o.state != :state');
+            $qb->setParameter('customer', $customer);
+            $qb->setParameter('state', OrderInterface::STATE_CART);
             $qb->orderBy('o.updatedAt', 'DESC');
             $qb->setMaxResults(1);
 
             $res = $qb->getQuery()->getOneOrNullResult();
 
-            $attributes[$user->getUsername()]['last_order'] = $res;
+            $attributes[$key]['last_order'] = $res;
         }
 
         return $this->render('admin/users.html.twig', array(
-            'users' => $users,
+            'customers' => $customers,
             'attributes' => $attributes,
         ));
     }
@@ -383,7 +417,9 @@ class AdminController extends Controller
         TokenGeneratorInterface $tokenGenerator,
         EntityManagerInterface $objectManager)
     {
-        $form = $this->createForm(InviteUserType::class);
+        $user = $userManager->createUser();
+
+        $form = $this->createForm(InviteUserType::class, $user);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -469,8 +505,6 @@ class AdminController extends Controller
 
         if ($editForm->isSubmitted() && $editForm->isValid()) {
 
-            $userManager = $this->getDoctrine()->getManagerForClass(ApiUser::class);
-
             $user = $editForm->getData();
 
             $roles = $editForm->get('roles')->getData();
@@ -487,8 +521,7 @@ class AdminController extends Controller
                 }
             }
 
-            $userManager->persist($user);
-            $userManager->flush();
+            $userManager->updateUser($user);
 
             $this->addFlash(
                 'notice',
@@ -607,6 +640,56 @@ class AdminController extends Controller
             'view'      => 'admin_delivery',
             'store_new' => 'admin_store_delivery_new'
         ];
+    }
+
+    /**
+     * @Route("/admin/tasks", name="admin_tasks")
+     */
+    public function tasksAction(Request $request, TranslatorInterface $translator)
+    {
+        $form = $this->createForm(AttachToOrganizationType::class);
+
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+
+            $tasks = $form->get('tasks')->getData();
+            $store = $form->get('store')->getData();
+
+            if ($store) {
+                foreach ($tasks as $task) {
+                    if (null === $task->getOrganization()) {
+                        $task->setOrganization($store->getOrganization());
+                    }
+                }
+
+                $this->getDoctrine()->getManagerForClass(Task::class)->flush();
+            }
+
+            return $this->redirectToRoute('admin_tasks');
+        }
+
+        $qb = $this->getDoctrine()
+            ->getRepository(Task::class)
+            ->createQueryBuilder('t');
+
+        $tasks = $this->get('knp_paginator')->paginate(
+            $qb,
+            $request->query->getInt('page', 1),
+            self::ITEMS_PER_PAGE,
+            [
+                PaginatorInterface::DEFAULT_SORT_FIELD_NAME => 't.doneBefore',
+                PaginatorInterface::DEFAULT_SORT_DIRECTION => 'desc',
+                PaginatorInterface::SORT_FIELD_WHITELIST => ['t.doneBefore'],
+                PaginatorInterface::DEFAULT_FILTER_FIELDS => [],
+                PaginatorInterface::FILTER_FIELD_WHITELIST => []
+            ]
+        );
+
+        return $this->render('admin/tasks.html.twig', [
+            'tasks' => $tasks,
+            'form' => $form->createView(),
+        ]);
     }
 
     /**
@@ -917,13 +1000,13 @@ class AdminController extends Controller
      */
     public function searchUsersAction(Request $request)
     {
-        $repository = $this->getDoctrine()->getRepository(ApiUser::class);
+        $repository = $this->getDoctrine()->getRepository(User::class);
 
         $results = $repository->search($request->query->get('q'));
 
         if ($request->query->has('format') && 'json' === $request->query->get('format')) {
 
-            $data = array_map(function (ApiUser $user) {
+            $data = array_map(function (User $user) {
 
                 $text = sprintf('%s (%s)', $user->getEmail(), $user->getUsername());
 
@@ -1089,41 +1172,68 @@ class AdminController extends Controller
      */
     public function embedAction(Request $request, SettingsManager $settingsManager)
     {
-        $pricingRuleSet = null;
+        return $this->redirectToRoute('admin_forms', [], 301);
+    }
 
-        $pricingRuleSetId = $settingsManager->get('embed.delivery.pricingRuleSet');
-        $withVehicle = $settingsManager->getBoolean('embed.delivery.withVehicle');
-        $withWeight = $settingsManager->getBoolean('embed.delivery.withWeight');
-
-        if ($pricingRuleSetId) {
-            $pricingRuleSet = $this->getDoctrine()
-                ->getRepository(PricingRuleSet::class)
-                ->find($pricingRuleSetId);
-        }
-
-        $form = $this->createForm(EmbedSettingsType::class);
-        $form->get('pricingRuleSet')->setData($pricingRuleSet);
-        $form->get('withVehicle')->setData($withVehicle);
-        $form->get('withWeight')->setData($withWeight);
+    /**
+     * @Route("/admin/forms/new", name="admin_form_new")
+     */
+    public function newFormAction(Request $request)
+    {
+        $deliveryForm = new DeliveryForm();
+        $form = $this->createForm(EmbedSettingsType::class, $deliveryForm);
 
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
 
-            $pricingRuleSet = $form->get('pricingRuleSet')->getData();
-            $withVehicle = $form->get('withVehicle')->getData();
-            $withWeight = $form->get('withWeight')->getData();
+            $this->getDoctrine()
+                ->getManagerForClass(DeliveryForm::class)
+                ->persist($deliveryForm);
+            $this->getDoctrine()
+                ->getManagerForClass(DeliveryForm::class)
+                ->flush();
 
-            $settingsManager->set('embed.delivery.pricingRuleSet', $pricingRuleSet ? $pricingRuleSet->getId() : null, 'embed');
-            $settingsManager->set('embed.delivery.withVehicle', $withVehicle ? 'yes' : 'no', 'embed');
-            $settingsManager->set('embed.delivery.withWeight', $withWeight ? 'yes' : 'no', 'embed');
-            $settingsManager->flush();
-
-            return $this->redirect($request->headers->get('referer'));
+            return $this->redirectToRoute('admin_forms');
         }
 
         return $this->render('admin/embed.html.twig', [
-            'pricing_rule_set' => $pricingRuleSet,
             'embed_settings_form' => $form->createView(),
+        ]);
+    }
+
+    /**
+     * @Route("/admin/forms/{id}", name="admin_form")
+     */
+    public function formAction($id, Request $request)
+    {
+        $deliveryForm = $this->getDoctrine()->getRepository(DeliveryForm::class)->find($id);
+
+        $form = $this->createForm(EmbedSettingsType::class, $deliveryForm);
+
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+
+            $this->getDoctrine()
+                ->getManagerForClass(DeliveryForm::class)
+                ->flush();
+
+            return $this->redirectToRoute('admin_forms');
+        }
+
+        return $this->render('admin/embed.html.twig', [
+            'embed_settings_form' => $form->createView(),
+        ]);
+    }
+
+    /**
+     * @Route("/admin/forms", name="admin_forms")
+     */
+    public function formsAction(Request $request)
+    {
+        $forms = $this->getDoctrine()->getRepository(DeliveryForm::class)->findAll();
+
+        return $this->render('admin/forms.html.twig', [
+            'forms' => $forms,
         ]);
     }
 
@@ -1803,5 +1913,31 @@ class AdminController extends Controller
                 'organization' => $organization,
             ]
         );
+    }
+
+    public function hubAction($id, Request $request)
+    {
+        $hub = $this->getDoctrine()->getRepository(Hub::class)->find($id);
+
+        if (!$hub) {
+            throw $this->createNotFoundException(sprintf('Hub #%d does not exist', $id));
+        }
+
+        $form = $this->createForm(HubType::class, $hub);
+        if ($request->isMethod('POST') && $form->handleRequest($request)->isValid()) {
+
+            $this->getDoctrine()->getManager()->flush();
+
+            $this->addFlash(
+                'notice',
+                $this->get('translator')->trans('global.changesSaved')
+            );
+
+            return $this->redirectToRoute('admin_hub');
+        }
+
+        return $this->render('admin/hub.html.twig', [
+            'form' => $form->createView(),
+        ]);
     }
 }

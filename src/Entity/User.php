@@ -2,15 +2,14 @@
 
 namespace AppBundle\Entity;
 
+use libphonenumber\NumberParseException;
 use libphonenumber\PhoneNumber;
-use libphonenumber\PhoneNumberFormat;
 use libphonenumber\PhoneNumberUtil;
 use ApiPlatform\Core\Annotation\ApiFilter;
 use ApiPlatform\Core\Annotation\ApiProperty;
 use ApiPlatform\Core\Annotation\ApiResource;
 use AppBundle\Action\Me as MeController;
 use AppBundle\Api\Filter\UserRoleFilter;
-use AppBundle\LoopEat\OAuthCredentialsTrait as LoopEatOAuthCredentialsTrait;
 use AppBundle\Sylius\Customer\CustomerInterface;
 use AppBundle\Sylius\Product\ProductInterface;
 use FOS\UserBundle\Model\User as BaseUser;
@@ -21,7 +20,6 @@ use Sylius\Component\Channel\Model\ChannelAwareInterface;
 use Sylius\Component\Channel\Model\ChannelInterface;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
-use Misd\PhoneNumberBundle\Validator\Constraints\PhoneNumber as AssertPhoneNumber;
 
 /**
  * @ApiResource(
@@ -55,9 +53,8 @@ use Misd\PhoneNumberBundle\Validator\Constraints\PhoneNumber as AssertPhoneNumbe
  * @UniqueEntity(fields={"usernameCanonical"}, errorPath="username")
  * @UniqueEntity("facebookId")
  */
-class ApiUser extends BaseUser implements JWTUserInterface, ChannelAwareInterface
+class User extends BaseUser implements JWTUserInterface, ChannelAwareInterface
 {
-    use LoopEatOAuthCredentialsTrait;
     use Timestampable;
 
     protected $id;
@@ -75,25 +72,6 @@ class ApiUser extends BaseUser implements JWTUserInterface, ChannelAwareInterfac
      * @var string
      */
     protected $email;
-
-    /**
-     * @Assert\NotBlank()
-     * @ApiProperty(iri="https://schema.org/givenName")
-    */
-    protected $givenName;
-
-    /**
-     * @Assert\NotBlank()
-     * @ApiProperty(iri="https://schema.org/familyName")
-     */
-    protected $familyName;
-
-    /**
-     * @var PhoneNumber|null
-     * @AssertPhoneNumber
-     * @ApiProperty(iri="https://schema.org/telephone")
-     */
-    protected $telephone;
 
     private $restaurants;
 
@@ -134,7 +112,9 @@ class ApiUser extends BaseUser implements JWTUserInterface, ChannelAwareInterfac
      */
     public function getGivenName()
     {
-        return $this->givenName;
+        if (null !== $this->customer) {
+            return $this->customer->getFirstName();
+        }
     }
 
     /**
@@ -142,8 +122,6 @@ class ApiUser extends BaseUser implements JWTUserInterface, ChannelAwareInterfac
      */
     public function setGivenName($givenName)
     {
-        $this->givenName = $givenName;
-
         if (null !== $this->customer) {
             $this->customer->setFirstName($givenName);
         }
@@ -154,7 +132,9 @@ class ApiUser extends BaseUser implements JWTUserInterface, ChannelAwareInterfac
      */
     public function getFamilyName()
     {
-        return $this->familyName;
+        if (null !== $this->customer) {
+            return $this->customer->getLastName();
+        }
     }
 
     /**
@@ -162,8 +142,6 @@ class ApiUser extends BaseUser implements JWTUserInterface, ChannelAwareInterfac
      */
     public function setFamilyName($familyName)
     {
-        $this->familyName = $familyName;
-
         if (null !== $this->customer) {
             $this->customer->setLastName($familyName);
         }
@@ -174,7 +152,16 @@ class ApiUser extends BaseUser implements JWTUserInterface, ChannelAwareInterfac
      */
     public function getTelephone()
     {
-        return $this->telephone;
+        if (null !== $this->customer) {
+
+            $phoneNumber = $this->customer->getPhoneNumber();
+
+            if (!empty($phoneNumber)) {
+                try {
+                    return PhoneNumberUtil::getInstance()->parse($phoneNumber);
+                } catch (NumberParseException $e) {}
+            }
+        }
     }
 
     /**
@@ -182,16 +169,8 @@ class ApiUser extends BaseUser implements JWTUserInterface, ChannelAwareInterfac
      */
     public function setTelephone($telephone)
     {
-        $this->telephone = $telephone;
-
         if (null !== $this->customer) {
-            if ($telephone instanceof PhoneNumber) {
-                $this->customer->setPhoneNumber(
-                    PhoneNumberUtil::getInstance()->format($telephone, PhoneNumberFormat::E164)
-                );
-            } else {
-                $this->customer->setPhoneNumber($telephone);
-            }
+            $this->customer->setTelephone($telephone);
         }
     }
 
@@ -319,7 +298,9 @@ class ApiUser extends BaseUser implements JWTUserInterface, ChannelAwareInterfac
 
     public function getFullName()
     {
-        return join(' ', [$this->givenName, $this->familyName]);
+        if (null !== $this->customer) {
+            return $this->customer->getFullName();
+        }
     }
 
     public function getChannel(): ?ChannelInterface

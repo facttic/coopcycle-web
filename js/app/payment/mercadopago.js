@@ -9,7 +9,7 @@ import _ from 'lodash'
 function getInstallments(cardNumber, amount, setPaymentMethod, setInstallments) {
 
   if (cardNumber.length >= 6) {
-      let bin = cardNumber.substring(0, 6)
+      let bin = cardNumber.replace(" ", "").substring(0, 6)
       // Obtener método de pago de la tarjeta
       Mercadopago.getPaymentMethod({
           "bin": bin
@@ -108,6 +108,7 @@ export default ({ onChange }) => ({
     Mercadopago.setPublishableKey(publishableKey)
 
     if (countriesWithIdentificationTypes.includes(country)) {
+      console.log("aqui toy");
       Mercadopago.getIdentificationTypes()
     }
   },

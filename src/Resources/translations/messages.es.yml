@@ -203,6 +203,7 @@ profile.email: Email
 profile.telephone: Teléfono
 profile.familyName: Apellidos
 profile.givenName: Nombre
+profile.fullName: Nombre Completo
 profile.managedStores: Tiendas gestionadas por el usuario
 profile.managedRestaurants: Restaurantes gestionados por el usuario
 profile.accountType: Tipo de cuenta
@@ -287,6 +288,7 @@ cart.widget.title: Tus detalles de entrega
 cart.widget.button: Pedir
 checkout.breadcrumb.address: Dirección
 checkout.breadcrumb.payment: Pago
+checkout.breadcrumb.confirm: Confirmación
 form.geojson_upload.file: Archivo
 form.store_type.pricing_rule_set.label: Tarifa
 form.store_type.prefill_pickup_address.label: Rellenar automáticamente la dirección
@@ -417,13 +419,17 @@ form.local_business.stripe_account.link_ok: "Éste restaurante ha sido enlazado 
   \ cuenta Stripe y puede recibir pagos de la plataforma.<br>\nPara gestionar tu cuenta\
   \ Stripe por favor usa el <a href=\"https://dashboard.stripe.com/\" target=\"_blank\"\
   >panel de administración de Stripe</a>.\n"
-form.settings.mercadopago.title: Mercado Pago
+form.settings.mercadopago.title: MercadoPago
 form.local_business.mercadopago_account.title: Cuenta de MercadoPago
 form.local_business.mercadopago_account.success: Cuenta MercadoPago conectada con éxito
+form.local_business.mercadopago_account.unlink.success: Cuenta MercadoPago desvinculada con éxito
+form.local_business.mercadopago_account.unlink.error: Algo ocurrio, la cuenta MercadoPago no se ha desvinculado.
+form.local_business.mercadopago_account.unlink.error_pending_orders: Este restaurant tiene órdenes pendientes, no se puede devincular la cuenta de MercadoPago.
 form.local_business.mercadopago.connect_button.text: Conectar con MercadoPago
-form.mercadopago_livemode.enable.label: Utilizar Mercadopago en modo « producción »
+form.local_business.mercadopago.disconnect_button.text: Desconectar de MercadoPago
+form.mercadopago_livemode.enable.label: Utilizar MercadoPago en modo « producción »
 form.mercadopago_livemode.enable.alert: En modo « producción », las tarjetas de crédito serán cargadas.
-form.mercadopago_livemode.disable.label: Utilizar Mercadopago en modo « test »
+form.mercadopago_livemode.disable.label: Utilizar MercadoPago en modo « test »
 form.mercadopago_livemode.disable.alert: En modo « test », las tarjetas de crédito no serán cargadas.
 form.mercadopago_livemode.disable_and_enable_maintenance.label: Utilizar el modo « test » y activar el mantenimiento
 form.mercadopago_livemode.disable_and_enable_maintenance.alert: Estás utilizando el modo « live ».<br>Si quiere pasar en modo « test », el mantenimiento se activará automáticamente.
@@ -661,10 +667,10 @@ embed.delivery.confirm_message: Su pedido de entrega se ha realizado y recibirá
 basics.next: Siguiente
 basics.continue: Continuar
 basics.created_at: Creado el %date%
-promotions.add_free_delivery_coupon: Añadir un cupón de promoción " envío gratuito
-  "
+promotions.add_free_delivery_coupon: Añadir un cupón de promoción " envío gratuito "
 base.footer.suggest: Sugerir un restaurante
 adminDashboard.package_sets.title: Paquetes
+adminDashboard.customize.title: Personalizar
 adminDashboard.restaurants.exclusive: Exclusivo
 adminDashboard.pledges.title: Sugerencias
 adminDashboard.tags.confirm_delete: "¿Estás seguro de eliminar esta etiqueta? \nTodos\
@@ -820,11 +826,15 @@ restaurant.form.loopeat_disconnect.label: Desconertar LoopEat
 restaurant.form.featured.label: Este restaurante aparece en la página de inicio
 restaurant.form.fulfillment_methods.label: Métodos de cumplimiento
 restaurant.form.section.settlement: Liquidación
+restaurant.form.section.taxonomy: Taxonomía
 restaurant.contract.variableDeliveryPrice.help: El importe cobrado se calculará utilizando
   el conjunto de reglas de precios seleccionados
 localBusiness.form.openingHoursBehavior: Comportamiento del horario de apertura
 localBusiness.form.openingHoursBehavior.asap: Lo antes posible
 localBusiness.form.openingHoursBehavior.time_slot: Intervalo de tiempo
+localBusiness.form.use_different_business_address.label: Usar una dirección de negocio
+  distinta
+localBusiness.form.business_address.label: Dirección de negocio
 restaurant.quotes_disclaimer.authenticated: Este restaurante también acepta pedidos
   de cotización. Para crear presupuestos, debe ser un cliente referenciado.<a href="%contact_us%">Contact
   us</a>para más información.
@@ -1030,3 +1040,21 @@ refund.list.refunded_at: Devuelto en
 refund.list.liable_party: Parte responsable
 refund.list.amount: Monto devuelto
 refund.list.comments: Comentarios
+authentication.register_benefits: Crea una cuenta para pedir más rápidamente. También podrás recuperar el historial de tus pedidos anteriores.
+form.checkout_address.telephone.help: Para contactar contigo en caso de un problema
+guest_checkout.user_with_same_email_exists: Ya existe una cuenta con el mismo correo electrónico. Por favor, inicia sesión para continuar, o usa otro correo electrónico para hacer un pedido sin crear una cuenta.
+guest_checkout.use_another_email: Usar otro correo electrónico
+restaurant.form.section.embed: Embeber
+restaurant.embed.disclaimer: Puedes embeber el checkout directamente en tu sitio.
+  Sigue las instrucciones a continuación para empezar.
+restaurant.embed.step_1: 'Agrega el script <code>coopcycle.js</code> a tu página'
+restaurant.embed.step_2: 'Agrega el <code>data-coopcycle-embed="%url%"</code> a un elemento
+  HTML clickeable'
+restaurant.embed.greeting: Eso es todo! Ahora cuando los visitantes hagan click en el botón,
+  se les abrirá una nueva ventana directamente en tu sitio.
+form.settings.guest_checkout_enabled.label: Habilitar checkout de invitado
+order.list.reorder: Reordenar
+homepage.form.title: ¿Necesitas entregar algo?
+homepage.form.content: "<strong>%brand_name%</strong> is operating local and non polluting\
+  \ on-demand bike delivery services. Ship a single package, or fulfill recuring shipping\
+  \ for your business."

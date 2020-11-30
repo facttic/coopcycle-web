@@ -19,7 +19,7 @@ security:
             id: fos_user.user_provider.username_email
         # jwt:
         #     lexik_jwt:
-        #         class: AppBundle\Entity\ApiUser
+        #         class: AppBundle\Entity\User
 
     firewalls:
         # disables authentication for assets and the profiler, adapt it according to your needs
@@ -51,6 +51,13 @@ security:
         api_tasks_import:
             pattern:   ^/api/tasks/import
             methods: [ POST ]
+            stateless: true
+            anonymous: ~
+            bearer_token: true
+
+        api_task_groups:
+            pattern:   ^/api/task_groups/[0-9]+$
+            methods: [ GET ]
             stateless: true
             anonymous: ~
             bearer_token: true
@@ -178,7 +185,6 @@ security:
         - { path: ^/register, role: IS_AUTHENTICATED_ANONYMOUSLY }
         - { path: ^/resetting, role: IS_AUTHENTICATED_ANONYMOUSLY }
         - { path: ^/order/public, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/order, roles: IS_AUTHENTICATED_REMEMBERED }
         - { path: ^/profile/restaurants, roles: ROLE_RESTAURANT }
         - { path: ^/profile/jwt, roles: IS_AUTHENTICATED_REMEMBERED }
         - { path: ^/profile/notifications, roles: IS_AUTHENTICATED_REMEMBERED }

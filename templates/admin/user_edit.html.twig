@@ -5,7 +5,7 @@
 {% block breadcrumb %}
 <li><a href="{{ path('admin_users') }}">{% trans %}adminDashboard.users.title{% endtrans %}</a></li>
 <li><a href="{{ path('admin_user_details', { username: user.username }) }}">{{ user.username }}</a></li>
-<li>{% trans %}adminDashboard.users.edit{% endtrans %}</li>
+<li>{% trans %}basics.edit{% endtrans %}</li>
 {% endblock %}
 
 {% block content %}
@@ -17,8 +17,7 @@
       {% if form.email is defined %}
         {{ form_row(form.email) }}
       {% endif %}
-      {{ form_row(form.familyName) }}
-      {{ form_row(form.givenName) }}
+      {{ form_row(form.fullName) }}
       {{ form_row(form.telephone) }}
       {% if form.quotesAllowed is defined %}
         {{ form_row(form.quotesAllowed) }}

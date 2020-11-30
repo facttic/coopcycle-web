@@ -19,8 +19,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install python-swiftclient python-keystoneclient
           pip install awscli
+      - name: Compile SDK for production
+        run: NODE_ENV=production npm run sdk:build
       - name: Compile assets for production
-        run: NODE_ENV=production node_modules/.bin/encore production
+        run: |
+          NODE_ENV=production node_modules/.bin/encore production
+          cp web/js/coopcycle.js web/build
       - name: Upload assets to storage
         run: |
           mkdir $GITHUB_SHA
