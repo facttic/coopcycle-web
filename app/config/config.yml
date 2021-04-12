@@ -55,6 +55,7 @@ parameters:
     avatar_dir: '%env(APP_PUBLIC_DIR)%/images/avatars/'
     centrifugo_tracking_channel: '$%centrifugo_namespace%_tracking'
     edenred_enabled: '%env(bool:EDENRED_ENABLED)%'
+    nucleos_profile.registration.confirmation.enabled: false
 
 services:
     # It is important to set a namespace,
@@ -74,6 +75,7 @@ framework:
     router:
         resource: "%kernel.project_dir%/app/config/routing.yml"
         strict_requirements: ~
+        utf8: true
     form:            ~
     csrf_protection: ~
     validation:      { enable_annotations: true }
@@ -118,12 +120,20 @@ framework:
                     - doctrine_close_connection
         transports:
             # https://symfony.com/doc/current/messenger.html#redis-transport
-            async:
-                dsn: "%env(COOPCYCLE_REDIS_DSN)%"
-                options:
-                    stream: "%database_name%:messages"
-                    group: "%database_name%"
-                    consumer: "%database_name%:consumer"
+            #
+            # When running multiple multiple Redis consumers, you may have error:
+            # "Could not acknowledge redis message"
+            #
+            # This is because each Redis consumer must be unique.
+            # Make sure to pass a DSN with a unique consumer name for each process.
+            #
+            # redis://localhost:6379/<stream>/<group>/<name>
+            #
+            # https://github.com/symfony/symfony/issues/35358
+            # https://github.com/symfony/symfony-docs/pull/11869
+            # https://github.com/symfony/symfony-docs/pull/14888
+            #
+            async: "%env(MESSENGER_TRANSPORT_DSN)%"
         routing:
             'AppBundle\Message\CalculateRoute': async
             'AppBundle\Message\DeliveryCreated': async
@@ -135,6 +145,8 @@ framework:
             'AppBundle\Message\Sms': async
             'AppBundle\Message\UpdateLocation': async
             'AppBundle\Message\TopBarNotification': async
+            'AppBundle\Message\Webhook': async
+            'AppBundle\Message\IndexDeliveries': async
     workflows:
         enabled: true
     mailer:
@@ -166,7 +178,6 @@ twig:
         currency_context: "@sylius.context.currency"
         tax_incl: '%env(bool:COOPCYCLE_TAX_INCL)%'
         loopeat_context: '@AppBundle\LoopEat\Context'
-        sentry_apm_enabled: "%env(bool:COOPCYCLE_SENTRY_APM_ENABLED)%"
         legacy_taxes: '%env(bool:COOPCYCLE_LEGACY_TAXES)%'
         payment_gateway_resolver: '@AppBundle\Payment\GatewayResolver'
         context_channel: "@sylius.context.channel"
@@ -258,8 +269,8 @@ api_platform:
     version: 1.0.0
     title: CoopCycle
     show_webby: false
-    enable_swagger_ui: false
-    enable_re_doc: true
+    enable_swagger_ui: true
+    enable_re_doc: false
     mapping:
         paths:
             - '%kernel.project_dir%/src/Api/Dto'
@@ -277,6 +288,8 @@ api_platform:
         json: ['application/json']
         csv: ['text/csv']
         html: ['text/html']
+    swagger:
+        versions: [3, 2]
 
 # Nelmio CORS
 nelmio_cors:
@@ -290,19 +303,21 @@ nelmio_cors:
         '^/api/':
             allow_origin: ['*']
 
-fos_user:
+nucleos_user:
     db_driver: orm
     firewall_name: web
     user_class: AppBundle\Entity\User
     service:
-        mailer: AppBundle\Mailer\FOSUserBundleMailer
         user_manager: coopcycle.user_manager
-    from_email:
-        address:        "%transactional_address%"
-        sender_name:    "%transactional_sender_name%"
+    from_email: "%transactional_sender_name% <%transactional_address%>"
+
+nucleos_profile:
     registration:
+        confirmation:
+            from_email: "%transactional_sender_name% <%transactional_address%>"
+            enabled: "%nucleos_profile.registration.confirmation.enabled%"
         form:
-            type: AppBundle\Form\RegistrationType
+            model: AppBundle\Form\Model\Registration
 
 lexik_jwt_authentication:
     secret_key:  "%jwt_private_key_path%"
@@ -319,7 +334,7 @@ lexik_jwt_authentication:
             name:    token
 
 gesdinet_jwt_refresh_token:
-    user_provider: fos_user.user_provider.username_email
+    user_provider: nucleos_user.user_provider.username_email
     ttl_update: true
 
 snc_redis:
@@ -627,6 +642,7 @@ fos_js_routing:
         - restaurant_cart_address
         - restaurant_cart_clear_time
         - restaurant_modify_cart_item_quantity
+        - admin_delivery
         - admin_dashboard_fullscreen
         - admin_foodtech_dashboard
         - admin_foodtech_settings
@@ -635,6 +651,7 @@ fos_js_routing:
         - admin_order_cancel
         - admin_order_delay
         - admin_order_fulfill
+        - admin_restaurant
         - admin_restaurant_dashboard
         - admin_restaurant_stats
         - admin_tags
@@ -643,6 +660,7 @@ fos_js_routing:
         - admin_task_list_modify
         - admin_task_receipt
         - admin_users_search
+        - order_continue
         - profile_jwt
         - profile_notifications
         - profile_notifications_mark_as_read
@@ -917,3 +935,13 @@ sensio_framework_extra:
     request:
         converters: true
         disable: ['doctrine.orm']
+
+# https://github.com/doctrine/DoctrineMigrationsBundle/issues/305
+doctrine_migrations:
+    migrations_paths:
+        'Application\Migrations': '%kernel.project_dir%/app/DoctrineMigrations'
+    storage:
+        table_storage:
+            table_name: migration_versions
+            version_column_name: version
+            executed_at_column_name: executed_at

@@ -4,6 +4,7 @@ namespace AppBundle\Controller\Utils;
 
 use ApiPlatform\Core\Api\IriConverterInterface;
 use ApiPlatform\Core\Exception\InvalidArgumentException;
+use AppBundle\Entity\LocalBusiness;
 use AppBundle\Entity\User;
 use AppBundle\Entity\RemotePushToken;
 use AppBundle\Entity\Store;
@@ -19,8 +20,8 @@ use AppBundle\Form\TaskUploadType;
 use AppBundle\Service\TaskManager;
 use AppBundle\Utils\TaskImageNamer;
 use Cocur\Slugify\SlugifyInterface;
-use FOS\UserBundle\Model\UserInterface;
-use FOS\UserBundle\Model\UserManagerInterface;
+use Nucleos\UserBundle\Model\UserInterface;
+use Nucleos\UserBundle\Model\UserManagerInterface;
 use Hashids\Hashids;
 use League\Flysystem\Filesystem;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTManagerInterface;
@@ -91,7 +92,6 @@ trait AdminDashboardTrait
         $taskExport->end = new \DateTime();
 
         $taskExportForm = $this->createForm(TaskExportType::class, $taskExport);
-        $taskGroupForm = $this->createForm(TaskGroupType::class);
 
         $taskExportForm->handleRequest($request);
         if ($taskExportForm->isSubmitted() && $taskExportForm->isValid()) {
@@ -108,41 +108,22 @@ trait AdminDashboardTrait
             return $response;
         }
 
-        $taskGroupForm->handleRequest($request);
-        if ($taskGroupForm->isSubmitted() && $taskGroupForm->isValid()) {
-
-            if ($taskGroupForm->getClickedButton() && 'delete' === $taskGroupForm->getClickedButton()->getName()) {
-
-                $taskGroup = $this->getDoctrine()
-                    ->getRepository(TaskGroup::class)
-                    ->find($taskGroupForm->get('id')->getData());
-
-                $taskManager->deleteGroup($taskGroup);
-
-                $this->getDoctrine()
-                    ->getManagerForClass(TaskGroup::class)
-                    ->flush();
-            }
-
-            return $this->redirectToDashboard($request);
-        }
-
-        $allTasks = $this->getDoctrine()
+        $unassignedTasks = $this->getDoctrine()
             ->getRepository(Task::class)
-            ->findByDate($date);
+            ->findUnassignedByDate($date);
 
         $taskLists = $this->getDoctrine()
             ->getRepository(TaskList::class)
             ->findByDate($date);
 
-        $allTasksNormalized = array_map(function (Task $task) {
+        $unassignedTasksNormalized = array_map(function (Task $task) {
             return $this->get('serializer')->normalize($task, 'jsonld', [
                 'resource_class' => Task::class,
                 'operation_type' => 'item',
                 'item_operation_name' => 'get',
                 'groups' => ['task', 'delivery', 'address', sprintf('address_%s', $this->getParameter('country_iso'))]
             ]);
-        }, $allTasks);
+        }, $unassignedTasks);
 
         $taskListsNormalized = array_map(function (TaskList $taskList) {
             return $this->get('serializer')->normalize($taskList, 'jsonld', [
@@ -203,14 +184,24 @@ trait AdminDashboardTrait
             ]);
         }, $stores);
 
+        $restaurants = $this->getDoctrine()->getRepository(LocalBusiness::class)->findBy([], ['name' => 'ASC']);
+
+        $restaurantsNormalized = array_map(function (LocalBusiness $restaurant) {
+            return $this->get('serializer')->normalize($restaurant, 'jsonld', [
+                'resource_class' => LocalBusiness::class,
+                'operation_type' => 'item',
+                'item_operation_name' => 'get',
+                'groups' => ['restaurant_simple']
+            ]);
+        }, $restaurants);
+
         return $this->render('admin/dashboard_iframe.html.twig', [
             'nav' => $request->query->getBoolean('nav', true),
             'date' => $date,
             'couriers' => $couriers,
-            'tasks' => $allTasksNormalized,
+            'unassigned_tasks' => $unassignedTasksNormalized,
             'task_lists' => $taskListsNormalized,
             'task_export_form' => $taskExportForm->createView(),
-            'task_group_form' => $taskGroupForm->createView(),
             'tags' => $normalizedTags,
             'jwt' => $jwtManager->create($this->getUser()),
             'centrifugo_token' => $centrifugoClient->generateConnectionToken($this->getUser()->getUsername(), (time() + 3600)),
@@ -219,6 +210,7 @@ trait AdminDashboardTrait
             'positions' => $positions,
             'task_recurrence_rules' => $recurrenceRulesNormalized,
             'stores' => $storesNormalized,
+            'restaurants' => $restaurantsNormalized,
         ]);
     }
 

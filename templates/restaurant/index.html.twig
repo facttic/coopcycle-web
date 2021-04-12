@@ -43,9 +43,8 @@
   {% block restaurant_nav %}
     {% if not embed_context.enabled %}
     <div class="homepage-restaurants__show-more text-left mb-4">
-      {% set hub = coopcycle_hub_resolve(restaurant) %}
-      {% if hub is not null %}
-        <a class="restaurant-show-more" href="{{ path('hub', { id: hub.id, slug: hub.name|slugify }) }}">
+      {% if restaurant.belongsToHub() %}
+        <a class="restaurant-show-more" href="{{ path('hub', { id: restaurant.hub.id, slug: restaurant.hub.name|slugify }) }}">
           <i class="fa fa-arrow-left mr-2"></i>
           <span>{% trans %}index.view_all_merchants{% endtrans %}</span>
         </a>
@@ -85,7 +84,7 @@
   {% if restaurant.quotesAllowed %}
     {% set trans_params = {
       '%contact_us%': ('mailto:' ~ coopcycle_setting('administrator_email')),
-      '%login%': path('fos_user_security_login')
+      '%login%': path('nucleos_user_security_login')
     } %}
     {% if app.user %}
       {% if not app.user.quotesAllowed %}
@@ -142,7 +141,8 @@
     We cache the following block for performance
     Iterating through all products, options… is a lot of database requests
     #}
-    {% cache restaurant_menu_cache_annotation restaurant %}
+    {% set cache_key = restaurant|cache_key(restaurant_menu_cache_annotation) %}
+    {% cache cache_key ttl(300) %}
     <div class="col-xs-12 col-sm-8" id="menu">
       <div class="restaurant-menu-wrapper">
       {% for child in restaurant.menuTaxon.children %}
@@ -187,8 +187,7 @@
               <div class="restaurant-menu-section-item">
                 {% if product_images|length > 1 %}
                   <button class="menu-item" type="button"
-                    data-toggle="modal"
-                    data-target="#product-details"
+                    data-modal="details"
                     data-product-name="{{ product.name|e('html_attr') }}"
                     data-product-images="{{ product_images|json_encode|e('html_attr') }}"
                     data-product-price="{{ (product|sylius_resolve_variant).price|e('html_attr') }}"
@@ -209,8 +208,7 @@
               <div class="restaurant-menu-section-item">
                 <button
                   class="menu-item"
-                  data-toggle="modal"
-                  data-target="#product-options"
+                  data-modal="options"
                   data-form-action="{{ path('restaurant_add_product_to_cart', { id: restaurant.id, code: product.code })|e('html_attr') }}"
                   data-product-code="{{ product.code|e('html_attr') }}"
                   data-product-name="{{ product.name|e('html_attr') }}"
@@ -232,7 +230,7 @@
 
     {% if restaurant.isFulfillmentMethodEnabled('delivery') or restaurant.isFulfillmentMethodEnabled('collection') %}
     <div class="col-xs-12 col-sm-4">
-      {{ form_start(cart_form) }}
+      {{ form_start(cart_form, { attr: { 'data-cart-url': path('restaurant_cart', { id: restaurant.id }) } }) }}
         <div id="cart"></div>
       {{ form_end(cart_form) }}
     </div>
@@ -252,44 +250,6 @@
     </div>
   {% endif %}
 
-</div>
-
-{# Modals for product options #}
-
-<div id="product-options" class="modal fade">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-        <h4 class="modal-title"></h4>
-      </div>
-      <div class="modal-body">
-        <div data-options-container></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="product-details" class="modal fade">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-        <h4 class="modal-title"></h4>
-      </div>
-      <div class="modal-body">
-        <form method="post" action="" data-product-simple>
-          <div data-carousel-container></div>
-          <hr />
-          <button class="btn btn-lg btn-block btn-primary" type="submit"></button>
-        </form>
-      </div>
-    </div>
-  </div>
 </div>
 
 {% set restaurant_json = { id: restaurant.id } %}

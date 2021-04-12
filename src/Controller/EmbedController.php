@@ -15,7 +15,7 @@ use AppBundle\Service\OrderManager;
 use AppBundle\Sylius\Order\OrderInterface;
 use AppBundle\Sylius\Order\OrderFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use FOS\UserBundle\Util\CanonicalizerInterface;
+use Nucleos\UserBundle\Util\CanonicalizerInterface;
 use Hashids\Hashids;
 use libphonenumber\PhoneNumber;
 use Sylius\Component\Taxation\Resolver\TaxRateResolverInterface;
@@ -290,7 +290,11 @@ class EmbedController extends AbstractController
                 $this->translator->trans('embed.delivery.confirm_message')
             );
 
-            return $this->redirectToRoute('public_order', ['number' => $order->getNumber()]);
+            $hashids = new Hashids($this->getParameter('secret'), 8);
+
+            return $this->redirectToRoute('public_order', [
+                'hashid' => $hashids->encode($order->getId())
+            ]);
         }
 
         return $this->render('embed/delivery/summary.html.twig', [

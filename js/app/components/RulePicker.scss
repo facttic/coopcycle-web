@@ -1,7 +1,13 @@
 .rule-picker {
-  padding: 15px 15px 0 15px;
-  border: 1px solid black;
-  border-radius: 4px;
+  .table > tbody > tr > td {
+    border-top: none;
+  }
+  .form-control {
+    background-color: transparent;
+    border: 1px dashed darken(#FFEFCF, 50%);
+    box-shadow: none;
+  }
+  margin-bottom: 30px;
   &-preview {
     margin-top: 10px;
     pre {

@@ -7,6 +7,8 @@ use AppBundle\Service\Geocoder;
 use AppBundle\Spreadsheet\AbstractSpreadsheetParser;
 use AppBundle\Spreadsheet\DeliverySpreadsheetParser;
 use Prophecy\Argument;
+use libphonenumber\PhoneNumber;
+use libphonenumber\PhoneNumberUtil;
 
 class DeliverySpreadsheetParserTest extends TestCase
 {
@@ -20,6 +22,8 @@ class DeliverySpreadsheetParserTest extends TestCase
 
         return new DeliverySpreadsheetParser(
             $this->geocoder->reveal(),
+            PhoneNumberUtil::getInstance(),
+            'fr'
         );
     }
 }

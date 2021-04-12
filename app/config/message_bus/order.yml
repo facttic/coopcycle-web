@@ -130,7 +130,6 @@ services:
       - '@coopcycle.settings_manager'
       - '@event_bus'
       - '@Symfony\Component\Messenger\MessageBusInterface'
-      - '@AppBundle\Entity\LocalBusinessRepository'
     tags:
         - name: event_subscriber
           subscribes_to: order:created
@@ -148,13 +147,15 @@ services:
   coopcycle.domain.order.reactor.send_remote_push_notification:
     class: AppBundle\Domain\Order\Reactor\SendRemotePushNotification
     arguments:
-      - '@fos_user.user_manager'
+      - '@nucleos_user.user_manager'
       - '@messenger.default_bus'
       - '@api_platform.iri_converter'
       - '@translator'
     tags:
         - name: event_subscriber
           subscribes_to: order:created
+        - name: event_subscriber
+          subscribes_to: order:accepted
 
   coopcycle.domain.order.reactor.clear_session:
     class: AppBundle\Domain\Order\Reactor\ClearSession
@@ -211,10 +212,10 @@ services:
         - name: event_subscriber
           subscribes_to: order:created
 
-  coopcycle.domain.order.reactor.publish_to_redis:
-    class: AppBundle\Domain\Order\Reactor\PublishToRedis
+  coopcycle.domain.order.reactor.publish_live_update:
+    class: AppBundle\Domain\Order\Reactor\PublishLiveUpdate
     arguments:
-      - '@coopcycle.socket_io_manager'
+      - '@AppBundle\Service\LiveUpdates'
     tags:
         - name: event_subscriber
           subscribes_to: order:created
@@ -236,7 +237,7 @@ services:
   coopcycle.domain.order.reactor.modify_promotions_usage:
     class: AppBundle\Domain\Order\Reactor\ModifyPromotionsUsage
     arguments:
-      - '@coopcycle.socket_io_manager'
+      - '@AppBundle\Service\LiveUpdates'
     tags:
         - name: event_subscriber
           subscribes_to: order:created
@@ -254,9 +255,7 @@ services:
   coopcycle.domain.order.reactor.create_geofencing_channel:
     class: AppBundle\Domain\Order\Reactor\CreateGeofencingChannel
     arguments:
-      $tile38: '@snc_redis.tile38'
-      $doorstepChanNamespace: '%tile38_doorstep_chan_namespace%'
-      $fleetKey: '%tile38_fleet_key%'
+      $geofencing: '@AppBundle\Service\Geofencing'
     tags:
         - name: event_subscriber
           subscribes_to: order:picked
@@ -264,8 +263,7 @@ services:
   coopcycle.domain.order.reactor.delete_geofencing_channel:
     class: AppBundle\Domain\Order\Reactor\DeleteGeofencingChannel
     arguments:
-      $tile38: '@snc_redis.tile38'
-      $doorstepChanNamespace: '%tile38_doorstep_chan_namespace%'
+      $geofencing: '@AppBundle\Service\Geofencing'
     tags:
         - name: event_subscriber
           subscribes_to: order:dropped

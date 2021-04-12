@@ -13,7 +13,6 @@ use AppBundle\Entity\ReusablePackaging;
 use AppBundle\Entity\StripeAccount;
 use AppBundle\Entity\Sylius\Order;
 use AppBundle\Entity\Sylius\OrderRepository;
-use AppBundle\Entity\Sylius\OrderView;
 use AppBundle\Entity\Sylius\Product;
 use AppBundle\Entity\Sylius\ProductImage;
 use AppBundle\Entity\Sylius\ProductTaxon;
@@ -70,13 +69,12 @@ use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Vich\UploaderBundle\Handler\UploadHandler;
 
 trait RestaurantTrait
 {
-    abstract protected function getRestaurantList(Request $request);
-
     abstract protected function getRestaurantRoutes();
 
     protected function getRestaurantRoute($name)
@@ -84,28 +82,6 @@ trait RestaurantTrait
         $routes = $this->getRestaurantRoutes();
 
         return $routes[$name];
-    }
-
-    /**
-     * @HideSoftDeleted
-     */
-    public function restaurantListAction(Request $request)
-    {
-        $routes = $request->attributes->get('routes');
-
-        [ $restaurants, $pages, $page ] = $this->getRestaurantList($request);
-
-        return $this->render($request->attributes->get('template'), [
-            'layout' => $request->attributes->get('layout'),
-            'restaurants' => $restaurants,
-            'pages' => $pages,
-            'page' => $page,
-            'dashboard_route' => $routes['dashboard'],
-            'menu_taxon_route' => $routes['menu_taxon'],
-            'menu_taxons_route' => $routes['menu_taxons'],
-            'restaurant_route' => $routes['restaurant'],
-            'products_route' => $routes['products']
-        ]);
     }
 
     protected function withRoutes($params, array $routes = [])
@@ -126,7 +102,10 @@ trait RestaurantTrait
         IriConverterInterface $iriConverter,
         TranslatorInterface $translator)
     {
-        $form = $this->createForm(RestaurantType::class, $restaurant);
+        $form = $this->createForm(RestaurantType::class, $restaurant, [
+            'loopeat_enabled' => $this->getParameter('loopeat_enabled'),
+            'edenred_enabled' => $this->getParameter('edenred_enabled'),
+        ]);
 
         // Associate Stripe account with restaurant
         if ($request->getSession()->getFlashBag()->has('stripe_account')) {
@@ -304,12 +283,15 @@ trait RestaurantTrait
         return $this->renderRestaurantForm($restaurant, $request, $validator, $jwtEncoder, $iriConverter, $translator);
     }
 
-    protected function renderRestaurantDashboard(
-        LocalBusiness $restaurant,
-        Request $request,
+    public function restaurantDashboardAction($restaurantId, Request $request,
         EntityManagerInterface $entityManager,
-        IriConverterInterface $iriConverter)
+        IriConverterInterface $iriConverter,
+        AuthorizationCheckerInterface $authorizationChecker)
     {
+        $restaurant = $this->getDoctrine()
+            ->getRepository(LocalBusiness::class)
+            ->find($restaurantId);
+
         $this->accessControl($restaurant);
 
         $date = new \DateTime('now');
@@ -335,47 +317,11 @@ trait RestaurantTrait
         $start->setTime(0, 0, 0);
         $end->setTime(23, 59, 59);
 
-        $qb = $entityManager->getRepository(Order::class)
-            ->createQueryBuilder('o')
-            ->join(Vendor::class, 'v', Expr\Join::WITH, 'o.vendor = v.id')
-            ->andWhere('v.restaurant = :restaurant')
-            ->andWhere('OVERLAPS(o.shippingTimeRange, CAST(:range AS tsrange)) = TRUE')
-            ->andWhere('o.state != :state')
-            ->setParameter('restaurant', $restaurant)
-            ->setParameter('range', sprintf('[%s, %s]', $start->format('Y-m-d H:i:s'), $end->format('Y-m-d H:i:s')))
-            ->setParameter('state', OrderInterface::STATE_CART);
-            ;
-
-        $orders = $qb->getQuery()->getResult();
-
-        //
-        // Add hub orders
-        //
-
-        $orderIds = array_map(fn(OrderInterface $r) => $r->getId(), $orders);
-
-        $qb = $entityManager->getRepository(OrderView::class)
-            ->createQueryBuilder('ov');
-
-        $qb = OrderRepository::addShippingTimeRangeClause($qb, 'ov', $start, $end);
-        $qb->select('ov.id');
-        $qb->andWhere('ov.restaurant = :restaurant');
-        if (count($orderIds) > 0) {
-            $qb->andWhere($qb->expr()->notIn('ov.id', $orderIds));
-        }
-        $qb->setParameter('restaurant', $restaurant->getId());
-
-        $hubOrderIds = array_map(fn(array $o) => $o['id'], $qb->getQuery()->getArrayResult());
-
-        if (count($hubOrderIds) > 0) {
-            $qb = $entityManager->getRepository(Order::class)
-                ->createQueryBuilder('o')
-                ->andWhere($qb->expr()->in('o.id', $hubOrderIds));
-
-            $hubOrders = $qb->getQuery()->getResult();
-
-            $orders = array_merge($orders, $hubOrders);
-        }
+        // FIXME
+        // Ideally, $authorizationChecker should be injected
+        // into OrderRepository directly, but it seems impossible with Sylius dependency injection
+        $orders = $entityManager->getRepository(Order::class)
+            ->findOrdersByRestaurantAndDateRange($restaurant, $start, $end, $authorizationChecker->isGranted('ROLE_ADMIN'));
 
         $routes = $request->attributes->get('routes');
 
@@ -398,17 +344,6 @@ trait RestaurantTrait
             'routes' => $routes,
             'date' => $date,
         ], $routes));
-    }
-
-    public function restaurantDashboardAction($restaurantId, Request $request,
-        EntityManagerInterface $entityManager,
-        IriConverterInterface $iriConverter)
-    {
-        $restaurant = $this->getDoctrine()
-            ->getRepository(LocalBusiness::class)
-            ->find($restaurantId);
-
-        return $this->renderRestaurantDashboard($restaurant, $request, $entityManager, $iriConverter);
     }
 
     public function restaurantMenuTaxonsAction($id, Request $request, FactoryInterface $taxonFactory)
@@ -733,11 +668,9 @@ trait RestaurantTrait
         $qb = $this->getDoctrine()
             ->getRepository(Product::class)
             ->createQueryBuilder('p');
+
         $qb->innerJoin(ProductTranslation::class, 't', Expr\Join::WITH, 't.translatable = p.id');
-        $qb->innerJoin(LocalBusiness::class, 'r', Expr\Join::WITH, '1 = 1');
-        $qb->innerJoin('r.products', 'rp');
-        $qb->andWhere('r.id = :restaurant');
-        $qb->andWhere('p.id = rp.id');
+        $qb->andWhere('p.restaurant = :restaurant');
         $qb->setParameter('restaurant', $restaurant);
 
         $products = $paginator->paginate(
@@ -982,8 +915,6 @@ trait RestaurantTrait
         $productOption = $productOptionFactory
             ->createNew();
 
-        $productOption->setRestaurant($restaurant);
-
         $routes = $request->attributes->get('routes');
 
         $form = $this->createForm(ProductOptionType::class, $productOption);
@@ -997,6 +928,8 @@ trait RestaurantTrait
             foreach ($productOption->getValues() as $optionValue) {
                 $optionValue->setCode(Uuid::uuid4()->toString());
             }
+
+            $restaurant->addProductOption($productOption);
 
             $entityManager->flush();
 
@@ -1195,7 +1128,8 @@ trait RestaurantTrait
     public function statsAction($id, Request $request,
         SlugifyInterface $slugify,
         TranslatorInterface $translator,
-        EntityManagerInterface $entityManager)
+        EntityManagerInterface $entityManager,
+        PaginatorInterface $paginator)
     {
         $tab = $request->query->get('tab', 'orders');
 
@@ -1227,14 +1161,6 @@ trait RestaurantTrait
         $end->setDate($date->format('Y'), $date->format('m'), $date->format('t'));
         $end->setTime(23, 59, 59);
 
-        $qb = $entityManager->getRepository(OrderView::class)
-            ->createQueryBuilder('ov');
-
-        $qb = OrderRepository::addShippingTimeRangeClause($qb, 'ov', $start, $end);
-        $qb->andWhere('ov.restaurant = :restaurant');
-        $qb->setParameter('restaurant', $restaurant->getId());
-        $qb->addOrderBy('ov.shippingTimeRange', 'DESC');
-
         $refundedOrders = $entityManager->getRepository(Order::class)
             ->findRefundedOrdersByRestaurantAndDateRange(
                 $restaurant,
@@ -1243,9 +1169,12 @@ trait RestaurantTrait
             );
 
         $stats = new RestaurantStats(
+            $entityManager,
+            $start,
+            $end,
+            $restaurant,
+            $paginator,
             $this->getParameter('kernel.default_locale'),
-            $qb,
-            $entityManager->getRepository(TaxRate::class),
             $translator
         );
 

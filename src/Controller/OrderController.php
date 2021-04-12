@@ -79,7 +79,7 @@ class OrderController extends AbstractController
 
         $order = $cartContext->getCart();
 
-        if (null === $order || null === $order->getVendor()) {
+        if (null === $order || !$order->hasVendor()) {
 
             return $this->redirectToRoute('homepage');
         }
@@ -90,7 +90,7 @@ class OrderController extends AbstractController
         if (count($errors->findByCodes(ShippingAddressConstraint::ADDRESS_NOT_SET)) > 0) {
 
             $vendor = $order->getVendor();
-            if ($vendor->isHub()) {
+            if ($order->isMultiVendor()) {
                 return $this->redirectToRoute('hub', ['id' => $vendor->getHub()->getId()]);
             }
 
@@ -235,7 +235,7 @@ class OrderController extends AbstractController
 
         $order = $cartContext->getCart();
 
-        if (null === $order || null === $order->getVendor()) {
+        if (null === $order || !$order->hasVendor()) {
 
             return $this->redirectToRoute('homepage');
         }
@@ -301,7 +301,7 @@ class OrderController extends AbstractController
     {
         $order = $cartContext->getCart();
 
-        if (null === $order || null === $order->getVendor()) {
+        if (null === $order || !$order->hasVendor()) {
 
             return new JsonResponse(['message' => 'No cart found in context'], 404);
         }
@@ -402,6 +402,8 @@ class OrderController extends AbstractController
             throw $this->createNotFoundException(sprintf('Order #%d does not exist', $id));
         }
 
+        $this->denyAccessUnlessGranted('view_public', $order);
+
         // TODO Check if order is in expected state (new or superior)
 
         $loopeatAccessTokenKey =
@@ -495,5 +497,28 @@ class OrderController extends AbstractController
         $session->set($this->sessionKeyName, $cart->getId());
 
         return $this->redirectToRoute('order');
+    }
+
+    /**
+     * @Route("/order/continue", name="order_continue")
+     */
+    public function continueAction(Request $request,
+        CartContextInterface $cartContext)
+    {
+        $order = $cartContext->getCart();
+
+        if (null === $order || !$order->hasVendor()) {
+
+            return $this->redirectToRoute('homepage');
+        }
+
+        $restaurants = $order->getRestaurants();
+
+        if (count($restaurants) === 0) {
+
+            return $this->redirectToRoute('homepage');
+        }
+
+        return $this->redirectToRoute('restaurant', ['id' => $restaurants->first()->getId()]);
     }
 }

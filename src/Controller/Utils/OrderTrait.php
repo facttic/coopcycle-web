@@ -5,13 +5,14 @@ namespace AppBundle\Controller\Utils;
 use AppBundle\Entity\Delivery;
 use AppBundle\Entity\Sylius\Order;
 use AppBundle\Entity\Sylius\OrderRepository;
-use AppBundle\Entity\Sylius\OrderView;
 use AppBundle\Form\OrderExportType;
 use AppBundle\Service\OrderManager;
 use AppBundle\Sylius\Order\ReceiptGenerator;
 use AppBundle\Utils\RestaurantStats;
 use Doctrine\ORM\EntityManagerInterface;
+use Knp\Component\Pager\PaginatorInterface;
 use League\Flysystem\Filesystem;
+use Sylius\Component\Order\Model\OrderInterface;
 use Sylius\Component\Payment\PaymentTransitions;
 use Sylius\Component\Resource\Repository\RepositoryInterface;
 use Symfony\Component\HttpFoundation\Cookie;
@@ -40,8 +41,8 @@ trait OrderTrait
     public function orderListAction(Request $request,
         TranslatorInterface $translator,
         EntityManagerInterface $entityManager,
-        RepositoryInterface $taxRateRepository
-    )
+        RepositoryInterface $taxRateRepository,
+        PaginatorInterface $paginator)
     {
         $response = new Response();
 
@@ -80,16 +81,13 @@ trait OrderTrait
                 $start->setTime(0, 0, 1);
                 $end->setTime(23, 59, 59);
 
-                $qb = $entityManager->getRepository(OrderView::class)
-                    ->createQueryBuilder('ov');
-
-                $qb = OrderRepository::addShippingTimeRangeClause($qb, 'ov', $start, $end);
-                $qb->addOrderBy('ov.shippingTimeRange', 'DESC');
-
                 $stats = new RestaurantStats(
+                    $entityManager,
+                    $start,
+                    $end,
+                    null,
+                    $paginator,
                     $this->getParameter('kernel.default_locale'),
-                    $qb,
-                    $taxRateRepository,
                     $translator,
                     $withVendorName = true,
                     $withMessenger

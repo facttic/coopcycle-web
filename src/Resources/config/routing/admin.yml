@@ -5,6 +5,7 @@ admin_delivery:
       layout: 'admin.html.twig'
       routes:
           success: admin_deliveries
+          back: admin_deliveries
   methods:  [ GET, POST ]
 
 admin_order_receipt:
@@ -130,7 +131,7 @@ admin_restaurants:
             menu_taxons: admin_restaurant_menu_taxons
             products: admin_restaurant_products
             restaurant: admin_restaurant
-    methods: [ GET ]
+    methods: [ GET, POST ]
 
 admin_restaurant_menu_taxons:
     path: /admin/restaurants/{id}/menus
@@ -452,6 +453,7 @@ admin_store_deliveries:
         routes:
             stores: admin_stores
             store: admin_store
+            import_success: admin_deliveries
     methods:  [ GET, POST ]
 
 admin_store_delivery_new:
@@ -463,6 +465,7 @@ admin_store_delivery_new:
             stores: admin_stores
             store: admin_store
             success: admin_store_deliveries
+            back: admin_deliveries
     methods:  [ GET, POST ]
 
 admin_store_users:
@@ -473,6 +476,8 @@ admin_store_users:
         routes:
             stores: admin_stores
             store: admin_store
+            store_addresses: admin_store_addresses
+            store_users: admin_store_users
     methods:  [ GET, POST ]
 
 admin_store_new_address:
@@ -483,6 +488,7 @@ admin_store_new_address:
         routes:
             stores: admin_stores
             store: admin_store
+            store_addresses: admin_store_addresses
     methods:  [ GET, POST ]
 
 admin_store_address:
@@ -493,6 +499,7 @@ admin_store_address:
         routes:
             stores: admin_stores
             store: admin_store
+            store_addresses: admin_store_addresses
     methods:  [ GET, POST ]
 
 admin_store_addresses:

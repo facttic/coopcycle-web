@@ -198,7 +198,20 @@ class Vendor implements ShippingOptionsInterface
 
     public function getEdenredMerchantId()
     {
+        if (null === $this->restaurant) {
+            return null;
+        }
+
         return $this->restaurant->getEdenredMerchantId();
+    }
+
+    public function isStripePaymentMethodEnabled($paymentMethod)
+    {
+        if (null === $this->restaurant) {
+            return false;
+        }
+
+        return $this->restaurant->isStripePaymentMethodEnabled($paymentMethod);
     }
 
     /* END Common interface between Restaurant & Hub */
@@ -217,14 +230,5 @@ class Vendor implements ShippingOptionsInterface
         $vendor->setHub($hub);
 
         return $vendor;
-    }
-
-    public function toArray()
-    {
-        if (null !== $this->hub) {
-            return $this->hub->getRestaurants();
-        }
-
-        return [ $this->restaurant ];
     }
 }

@@ -62,11 +62,6 @@ class DashboardController extends AbstractController
         ];
     }
 
-    protected function getRestaurantList(Request $request)
-    {
-        return [ $this->getUser()->getRestaurants(), 1, 1 ];
-    }
-
     protected function getStoreList()
     {
         return [ $this->getUser()->getStores(), 1, 1 ];
@@ -104,9 +99,9 @@ class DashboardController extends AbstractController
 
             $restaurant = $request->attributes->get('_restaurant');
 
-            return $this->statsAction($restaurant->getId(), $request, $slugify, $translator, $entityManager);
+            return $this->statsAction($restaurant->getId(), $request, $slugify, $translator, $entityManager, $paginator);
         }
 
-        return $this->redirectToRoute('fos_user_profile_show');
+        return $this->redirectToRoute('nucleos_profile_profile_show');
     }
 }

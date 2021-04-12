@@ -77,11 +77,11 @@ class DeliveryManager
 
     public function createFromOrder(OrderInterface $order)
     {
-        if (null === $order->getVendor()) {
+        if (!$order->hasVendor()) {
             throw new \InvalidArgumentException('Order should reference a vendor');
         }
 
-        $pickupAddress = $order->getVendor()->getAddress();
+        $pickupAddress = $order->getPickupAddress();
         $dropoffAddress = $order->getShippingAddress();
 
         if (null === $dropoffAddress) {

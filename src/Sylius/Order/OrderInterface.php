@@ -109,11 +109,6 @@ interface OrderInterface extends
     public function getShippingTimeRange(): ?TsRange;
 
     /**
-     * @return boolean
-     */
-    public function isFoodtech(): bool;
-
-    /**
      * @param string|null $state
      *
      * @return PaymentInterface|null
@@ -166,17 +161,49 @@ interface OrderInterface extends
     public function getVendor(): ?Vendor;
 
     /**
+     * @param Vendor|null $vendor
+     */
+    public function setVendor(?Vendor $vendor): void;
+
+    /**
      * @return boolean
      */
     public function hasVendor(): bool;
 
     /**
-     * @return array
+     * @return Collection
      */
-    public function getVendors(): array;
+    public function getVendors(): Collection;
 
     /**
      * @return int
      */
     public function getTransferAmount(LocalBusiness $subVendor): int;
+
+    /**
+     * @return \SplObjectStorage
+     */
+    public function getItemsGroupedByVendor(): \SplObjectStorage;
+
+    /**
+     * @return int
+     */
+    public function getReusablePackagingPledgeReturn();
+
+    /**
+     * @param LocalBusiness $restaurant
+     * @return float
+     */
+    public function getPercentageForRestaurant(LocalBusiness $restaurant): float;
+
+    public function addRestaurant(LocalBusiness $restaurant, int $itemsTotal, int $transferAmount);
+
+    public function getRestaurants(): Collection;
+
+    public function isMultiVendor(): bool;
+
+    /**
+     * @return Address|null
+     */
+    public function getPickupAddress(): ?Address;
 }

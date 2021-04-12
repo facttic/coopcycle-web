@@ -2,6 +2,7 @@ import React from 'react'
 import { connect } from 'react-redux'
 import _ from 'lodash'
 import { withTranslation } from 'react-i18next'
+import { Accordion } from 'react-accessible-accordion'
 
 import { openAddUserModal } from '../redux/actions'
 import TaskList from './TaskList'
@@ -9,13 +10,6 @@ import TaskList from './TaskList'
 import { selectTaskLists } from '../redux/selectors'
 
 class TaskLists extends React.Component {
-
-  componentDidMount() {
-    // Hide other collapsibles when a collapsible is going to be shown
-    $('#accordion').on('show.bs.collapse', '.collapse', () => {
-      $('#accordion').find('.collapse.in').collapse('hide')
-    })
-  }
 
   render() {
 
@@ -32,32 +26,29 @@ class TaskLists extends React.Component {
             </a>)
           }
         </h4>
-        <div
+        <Accordion
+          allowZeroExpanded
           id="accordion"
           className="dashboard__panel__scroll"
           style={{ opacity: taskListsLoading ? 0.7 : 1, pointerEvents: taskListsLoading ? 'none' : 'initial' }}>
           {
-            _.map(taskLists, (taskList, index) => {
+            _.map(taskLists, (taskList) => {
 
               if (this.props.hiddenCouriers.includes(taskList.username)) {
                 return null
               }
 
-              let collapsed = !(index === 0)
-
               return (
                 <TaskList
                   key={ taskList['@id'] }
-                  collapsed={ collapsed }
                   username={ taskList.username }
                   distance={ taskList.distance }
                   duration={ taskList.duration }
-                  items={ taskList.items }
                   uri={ taskList['@id'] } />
               )
             })
           }
-        </div>
+        </Accordion>
       </div>
     )
   }
@@ -67,8 +58,8 @@ function mapStateToProps (state) {
 
   return {
     taskLists: selectTaskLists(state),
-    taskListsLoading: state.dispatch.taskListsLoading,
-    hiddenCouriers: state.filters.hiddenCouriers,
+    taskListsLoading: state.logistics.ui.taskListsLoading,
+    hiddenCouriers: state.settings.filters.hiddenCouriers,
   }
 }
 

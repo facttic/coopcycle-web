@@ -10,15 +10,14 @@ import Task from './Task'
 import TaskGroup from './TaskGroup'
 import RecurrenceRule from './RecurrenceRule'
 import UnassignedTasksPopoverContent from './UnassignedTasksPopoverContent'
-import { setTaskListGroupMode, openNewTaskModal, toggleSearch, setCurrentRecurrenceRule, openNewRecurrenceRuleModal } from '../redux/actions'
-import { selectGroups, selectStandaloneTasks, selectRecurrenceRules } from '../redux/selectors'
+import { setTaskListGroupMode, openNewTaskModal, toggleSearch, setCurrentRecurrenceRule, openNewRecurrenceRuleModal, deleteGroup } from '../redux/actions'
+import { selectGroups, selectStandaloneTasks, selectRecurrenceRules, selectSelectedTasks } from '../redux/selectors'
 
 class StandaloneTasks extends React.Component {
 
   shouldComponentUpdate(nextProps) {
     if (nextProps.tasks === this.props.tasks
-      && nextProps.offset === this.props.offset
-      && nextProps.selectedTasksLength === this.props.selectedTasksLength) {
+      && nextProps.offset === this.props.offset) {
       return false
     }
 
@@ -55,7 +54,7 @@ class StandaloneTasks extends React.Component {
 
 const StandaloneTasksWithConnect = connect(
   (state) => ({
-    selectedTasksLength: state.selectedTasks.length,
+    selectedTasksLength: selectSelectedTasks(state).length,
   })
 )(StandaloneTasks)
 
@@ -118,12 +117,6 @@ const Buttons = connect(
 
 class UnassignedTasks extends React.Component {
 
-  renderGroup(group, tasks) {
-    return (
-      <TaskGroup key={ group.id } group={ group } tasks={ tasks } />
-    )
-  }
-
   render() {
 
     return (
@@ -153,7 +146,11 @@ class UnassignedTasks extends React.Component {
                           { ...provided.draggableProps }
                           { ...provided.dragHandleProps }
                         >
-                          { this.renderGroup(group, group.tasks) }
+                          <TaskGroup
+                            key={ group.id }
+                            group={ group }
+                            tasks={ group.tasks }
+                            onConfirmDelete={ () => this.props.deleteGroup(group) } />
                         </div>
                       )}
                     </Draggable>
@@ -184,6 +181,7 @@ function mapStateToProps (state) {
 function mapDispatchToProps(dispatch) {
   return {
     setCurrentRecurrenceRule: (recurrenceRule) => dispatch(setCurrentRecurrenceRule(recurrenceRule)),
+    deleteGroup: (group) => dispatch(deleteGroup(group)),
   }
 }
 

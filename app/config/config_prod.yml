@@ -24,6 +24,7 @@ framework:
 
 parameters:
     router.request_context.scheme: 'https'
+    nucleos_profile.registration.confirmation.enabled: true
 
 # https://github.com/doctrine/DoctrineBundle/releases/tag/2.0.1
 # https://symfony.com/blog/new-in-doctrinebundle-1-11-0
@@ -106,17 +107,24 @@ monolog:
         console:
             type:  console
 
-fos_user:
+nucleos_profile:
     registration:
         confirmation:
             enabled: true
 
+services:
+    Sentry\Integration\IgnoreErrorsIntegration:
+        arguments:
+            $options:
+                ignore_exceptions:
+                    - Symfony\Component\Security\Core\Exception\AccessDeniedException
+                    - Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+                    - ApiPlatform\Core\Bridge\Symfony\Validator\Exception\ValidationException
+
 sentry:
     dsn: '%sentry_public_dsn%'
     options:
-        # https://github.com/getsentry/sentry-symfony#step-3-configure-the-sdk
-        # https://docs.sentry.io/platforms/php/#php-specific-options
-        excluded_exceptions:
-            - Symfony\Component\Security\Core\Exception\AccessDeniedException
-            - Symfony\Component\HttpKernel\Exception\NotFoundHttpException
-            - ApiPlatform\Core\Bridge\Symfony\Validator\Exception\ValidationException
+        tags:
+            coopcycle_app_name: '%env(COOPCYCLE_APP_NAME)%'
+        integrations:
+            - 'Sentry\Integration\IgnoreErrorsIntegration'

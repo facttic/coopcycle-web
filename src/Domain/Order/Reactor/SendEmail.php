@@ -26,20 +26,17 @@ class SendEmail
     private $emailManager;
     private $settingsManager;
     private $eventBus;
-    private $restaurantRepository;
 
     public function __construct(
         EmailManager $emailManager,
         SettingsManager $settingsManager,
         MessageBus $eventBus,
-        MessageBusInterface $messageBus,
-        LocalBusinessRepository $restaurantRepository)
+        MessageBusInterface $messageBus)
     {
         $this->emailManager = $emailManager;
         $this->settingsManager = $settingsManager;
         $this->eventBus = $eventBus;
         $this->messageBus = $messageBus;
-        $this->restaurantRepository = $restaurantRepository;
     }
 
     public function __invoke(Event $event)
@@ -47,9 +44,16 @@ class SendEmail
         $order = $event->getOrder();
 
         if ($event instanceof OrderAccepted) {
+
             $message = $this->emailManager->createOrderAcceptedMessage($order);
             $this->emailManager->sendTo($message, $order->getCustomer()->getEmail());
             $this->eventBus->handle(new EmailSent($order, $order->getCustomer()->getEmail()));
+
+            // When this is a multi-vendor order,
+            // we notify owners when the order has been *ACCEPTED*
+            if ($order->isMultiVendor()) {
+                $this->notifyOwners($order);
+            }
         }
 
         if ($event instanceof OrderRefused || $event instanceof OrderCancelled) {
@@ -65,10 +69,10 @@ class SendEmail
         }
 
         if ($event instanceof OrderCreated) {
-            if ($order->isFoodtech()) {
-                $this->handleFoodtechOrderCreated($event);
+            if ($order->hasVendor()) {
+                $this->handleOrderCreatedWithVendor($event);
             } else {
-                $this->handleOnDemandOrderCreated($event);
+                $this->handleOrderCreated($event);
             }
         }
 
@@ -80,7 +84,7 @@ class SendEmail
         }
     }
 
-    private function handleFoodtechOrderCreated(Event $event)
+    private function handleOrderCreatedWithVendor(Event $event)
     {
         $order = $event->getOrder();
 
@@ -98,26 +102,20 @@ class SendEmail
         );
         $this->eventBus->handle(new EmailSent($order, $this->settingsManager->get('administrator_email')));
 
-        // Send email to restaurant owners
-        $vendor = $order->getVendor();
+        // Send email to shop owners
+        // When this is a multi vendor order,
+        // we will send the email when the order is *ACCEPTED*
+        if ($order->isMultiVendor()) {
+            return;
+        }
 
-        if ($vendor->isHub()) {
+        $this->notifyOwners($order);
+    }
 
-            $restaurants = [];
-            foreach ($order->getItems() as $orderItem) {
-                $product = $orderItem->getVariant()->getProduct();
-                $restaurant = $this->restaurantRepository->findOneByProduct($product);
-                if (!in_array($restaurant, $restaurants, true)) {
-                    $restaurants[] = $restaurant;
-                }
-            }
-
-            foreach ($restaurants as $restaurant) {
-                $this->sendEmailToOwners($order, $restaurant);
-            }
-
-        } else {
-            $this->sendEmailToOwners($order, $vendor->getRestaurant());
+    private function notifyOwners(OrderInterface $order)
+    {
+        foreach ($order->getRestaurants() as $restaurant) {
+            $this->sendEmailToOwners($order, $restaurant);
         }
     }
 
@@ -144,7 +142,7 @@ class SendEmail
         }
     }
 
-    private function handleOnDemandOrderCreated(Event $event)
+    private function handleOrderCreated(Event $event)
     {
         $order = $event->getOrder();
 

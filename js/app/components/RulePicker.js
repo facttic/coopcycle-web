@@ -14,6 +14,8 @@ export const numericTypes = [
   'order.itemsTotal',
 ]
 
+export const isNum = (type) => _.includes(numericTypes, type)
+
 const lineToString = state => {
   /*
   Build the expression line from the user's input stored in state.
@@ -103,28 +105,32 @@ class RulePicker extends React.Component {
 
     return (
       <div className="rule-picker">
-        { this.state.lines.map((line, index) => (
-          <RulePickerLine
-            key={ `${index}-${this.state.rev}` }
-            index={ index }
-            type={ line.left }
-            operator={ line.operator }
-            value={ line.right }
-            zones={ this.props.zones }
-            packages={ this.props.packages }
-            onUpdate={ this.updateLine }
-            onDelete={ this.deleteLine } />
-        )) }
-        <div className="row">
-          <div className="col-xs-12 text-right">
-            <button className="btn btn-xs btn-primary" onClick={this.addLine}>
-              <i className="fa fa-plus"></i> { this.props.t('RULE_PICKER_ADD_CONDITION') }
-            </button>
-          </div>
+        <table className="table mb-2">
+          <tbody>
+          { this.state.lines.map((line, index) => (
+            <RulePickerLine
+              key={ `${index}-${this.state.rev}` }
+              index={ index }
+              type={ line.left }
+              operator={ line.operator }
+              value={ line.right }
+              zones={ this.props.zones }
+              packages={ this.props.packages }
+              onUpdate={ this.updateLine }
+              onDelete={ this.deleteLine } />
+          )) }
+          </tbody>
+        </table>
+        <div className="text-right">
+          <button className="btn btn-xs btn-default" onClick={this.addLine}>
+            <i className="fa fa-plus"></i> { this.props.t('RULE_PICKER_ADD_CONDITION') }
+          </button>
         </div>
-        <div className="row rule-picker-preview">
+        {/*
+        <div className="rule-picker-preview">
           <pre>{ linesToString(this.state.lines) }</pre>
         </div>
+        */}
       </div>
     )
   }

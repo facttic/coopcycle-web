@@ -7,24 +7,25 @@ import {
 } from '@reduxjs/toolkit'
 
 import { moment } from '../../coopcycle-frontend-js'
-import { selectTaskLists as selectTaskListsBase, selectUnassignedTasks, selectAllTasks, selectSelectedDate } from '../../coopcycle-frontend-js/dispatch/redux'
-import { filter, orderBy, forEach, find, reduce, map, differenceWith, includes } from 'lodash'
+import { selectUnassignedTasks, selectAllTasks, selectSelectedDate, taskListAdapter, taskAdapter } from '../../coopcycle-frontend-js/logistics/redux'
+import { filter, forEach, find, reduce, map, differenceWith, includes, keyBy, groupBy, mapValues, pickBy } from 'lodash'
 import { isTaskVisible, isOffline, recurrenceTemplateToArray } from './utils'
+
+const taskListSelectors = taskListAdapter.getSelectors((state) => state.logistics.entities.taskLists)
+const taskSelectors = taskAdapter.getSelectors((state) => state.logistics.entities.tasks)
 
 export const recurrenceRulesAdapter = createEntityAdapter({
   selectId: (o) => o['@id'],
   sortComparer: (a, b) => a.orgName.localeCompare(b.orgName),
 })
 
-export const selectTaskLists = createSelector(
-  selectTaskListsBase,
-  taskLists => orderBy(taskLists, 'username')
-)
+export const selectCurrentTask = state => state.logistics.ui.currentTask
+export const selectCouriers = state => state.config.couriersList
+export const selectTaskEvents = state => state.taskEvents
 
-export const selectBookedUsernames = createSelector(
-  selectTaskLists,
-  taskLists => taskLists.map(taskList => taskList.username)
-)
+export const selectTaskLists = taskListSelectors.selectAll
+
+export const selectBookedUsernames = taskListSelectors.selectIds
 
 export const selectGroups = createSelector(
   selectUnassignedTasks,
@@ -109,7 +110,7 @@ export const selectStandaloneTasks = createSelector(
 
 export const selectVisibleTaskIds = createSelector(
   selectAllTasks,
-  state => state.filters,
+  state => state.settings.filters,
   selectSelectedDate,
   (tasks, filters, date) => filter(tasks, task => isTaskVisible(task, filters, date)).map(task => task['@id'])
 )
@@ -126,14 +127,22 @@ export const selectPolylines = createSelector(
 )
 
 export const selectAsTheCrowFlies = createSelector(
-  selectTaskLists,
-  (taskLists) => {
-    let asTheCrowFlies = {}
-    forEach(taskLists, taskList => {
-      asTheCrowFlies[taskList.username] =
-        map(taskList.items, item => ([ item.address.geo.latitude, item.address.geo.longitude ]))
+  taskSelectors.selectEntities,
+  taskListSelectors.selectEntities,
+  (tasksById, taskListsByUsername) => {
+
+    return mapValues(taskListsByUsername, taskList => {
+      const polyline = map(taskList.itemIds, itemId => {
+        const item = tasksById[itemId]
+
+        return item ? [
+          item.address.geo.latitude,
+          item.address.geo.longitude
+        ] : []
+      })
+
+      return filter(polyline, (coords) => coords.length === 2)
     })
-    return asTheCrowFlies
   }
 )
 
@@ -170,8 +179,8 @@ export const selectFuseSearch = createSelector(
 )
 
 export const selectPositions = createSelector(
-  state => state.positions,
-  state => state.offline,
+  state => state.tracking.positions,
+  state => state.tracking.offline,
   (positions, offline) => positions.map(position => ({
     ...position,
     offline: includes(offline, position.username) ? true : isOffline(position.lastSeen),
@@ -225,5 +234,63 @@ export const selectRecurrenceRules = createSelector(
 
       return matchingTasks.length > 0
     })
+  }
+)
+
+export const selectCouriersWithExclude = createSelector(
+  selectCouriers,
+  taskListSelectors.selectAll,
+  (state, exclude) => exclude,
+  (couriers, taskLists, exclude) => {
+
+    if (exclude) {
+      const usernames = taskLists.map(taskList => taskList.username)
+
+      return filter(couriers, courier => !includes(usernames, courier.username))
+    }
+
+    return couriers
+  }
+)
+
+export const selectCurrentTaskEvents = createSelector(
+  selectCurrentTask,
+  selectTaskEvents,
+  (currentTask, taskEvents) => {
+
+    if (!currentTask) {
+      return []
+    }
+
+    return Object.prototype.hasOwnProperty.call(taskEvents, currentTask['@id']) ? taskEvents[currentTask['@id']] : []
+  }
+)
+
+export const selectSelectedTasks = createSelector(
+  taskSelectors.selectEntities,
+  state => state.selectedTasks,
+  (tasksById, selectedTasks) => selectedTasks.map(id => tasksById[id])
+)
+
+export const selectPickupTasks = createSelector(
+  taskSelectors.selectAll,
+  (tasks) => filter(tasks, task => task.type === 'PICKUP')
+)
+
+export const selectPickupGroups = createSelector(
+  selectPickupTasks,
+  state => state.config.restaurants,
+  (tasks, restaurants) => {
+
+    const tasksByAddress = groupBy(tasks, 'address.@id')
+    const restaurantsByAddress = keyBy(restaurants, 'address')
+
+    const hash = mapValues(restaurantsByAddress, (restaurant, address) => ({
+      restaurant,
+      tasks: Object.prototype.hasOwnProperty.call(tasksByAddress, address) ?
+        tasksByAddress[address] : []
+    }))
+
+    return pickBy(hash, (group) => group.tasks.length > 0)
   }
 )

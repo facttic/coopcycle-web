@@ -4,11 +4,11 @@ import { Provider } from 'react-redux'
 import lottie from 'lottie-web'
 import { I18nextProvider } from 'react-i18next'
 import moment from 'moment'
-import _ from 'lodash'
 import { ConfigProvider } from 'antd'
 import Split from 'react-split'
 
 import i18n, { antdLocale } from '../i18n'
+
 import { createStoreFromPreloadedState } from './redux/store'
 import RightPanel from './components/RightPanel'
 import LeafletMap from './components/LeafletMap'
@@ -20,12 +20,20 @@ import { recurrenceRulesAdapter } from './redux/selectors'
 import 'react-phone-number-input/style.css'
 import './dashboard.scss'
 
+import { taskListUtils, taskAdapter, taskListAdapter } from '../coopcycle-frontend-js/logistics/redux'
+
 function start() {
 
   const dashboardEl = document.getElementById('dashboard')
 
-  const date = moment(dashboardEl.dataset.date)
-  const tasks = JSON.parse(dashboardEl.dataset.tasks)
+  let date = moment(dashboardEl.dataset.date)
+  let unassignedTasks = JSON.parse(dashboardEl.dataset.unassignedTasks)
+  let taskLists = JSON.parse(dashboardEl.dataset.taskLists)
+
+  let assignedTasks = taskListUtils.assignedTasks(taskLists)
+
+  // normalize data, keep only task ids, instead of the whole objects
+  taskLists = taskLists.map(taskList => taskListUtils.replaceTasksWithIds(taskList))
 
   const preloadedPositions = JSON.parse(dashboardEl.dataset.positions)
   const positions = preloadedPositions.map(pos => ({
@@ -35,26 +43,40 @@ function start() {
   }))
 
   let preloadedState = {
-    dispatch: {
-      unassignedTasks: _.filter(tasks, task => !task.isAssigned),
-      taskLists: JSON.parse(dashboardEl.dataset.taskLists),
+    logistics : {
       date,
+      entities: {
+        tasks: taskAdapter.upsertMany(
+          taskAdapter.getInitialState(),
+          unassignedTasks.concat(assignedTasks)
+        ),
+        taskLists: taskListAdapter.upsertMany(
+          taskListAdapter.getInitialState(),
+          taskLists
+        )
+      }
     },
-    tags: JSON.parse(dashboardEl.dataset.tags),
-    couriersList: JSON.parse(dashboardEl.dataset.couriersList),
-    uploaderEndpoint: dashboardEl.dataset.uploaderEndpoint,
-    exampleSpreadsheetUrl: dashboardEl.dataset.exampleSpreadsheetUrl,
     jwt: dashboardEl.dataset.jwt,
-    centrifugoToken: dashboardEl.dataset.centrifugoToken,
-    centrifugoTrackingChannel: dashboardEl.dataset.centrifugoTrackingChannel,
-    centrifugoEventsChannel: dashboardEl.dataset.centrifugoEventsChannel,
-    nav: dashboardEl.dataset.nav,
-    positions,
+
     rrules: recurrenceRulesAdapter.upsertMany(
       recurrenceRulesAdapter.getInitialState(),
       JSON.parse(dashboardEl.dataset.rrules)
     ),
-    stores: JSON.parse(dashboardEl.dataset.stores),
+    config: {
+      centrifugoToken: dashboardEl.dataset.centrifugoToken,
+      centrifugoTrackingChannel: dashboardEl.dataset.centrifugoTrackingChannel,
+      centrifugoEventsChannel: dashboardEl.dataset.centrifugoEventsChannel,
+      stores: JSON.parse(dashboardEl.dataset.stores),
+      tags: JSON.parse(dashboardEl.dataset.tags),
+      uploaderEndpoint: dashboardEl.dataset.uploaderEndpoint,
+      exampleSpreadsheetUrl: dashboardEl.dataset.exampleSpreadsheetUrl,
+      couriersList: JSON.parse(dashboardEl.dataset.couriersList),
+      nav: dashboardEl.dataset.nav,
+      restaurants: JSON.parse(dashboardEl.dataset.restaurants),
+    },
+    tracking: {
+      positions,
+    }
   }
 
   const key = date.format('YYYY-MM-DD')
@@ -106,7 +128,7 @@ function start() {
       document.querySelector('.dashboard__loader').remove()
 
       // Make sure map is rendered correctly with Split.js
-      mapRef.current.invalidateSize()
+      // mapRef.current.invalidateSize()
     }
   )
 

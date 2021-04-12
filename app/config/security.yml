@@ -4,7 +4,7 @@ security:
 
     encoders:
         Symfony\Component\Security\Core\User\User: plaintext
-        FOS\UserBundle\Model\UserInterface: sha512
+        Nucleos\UserBundle\Model\UserInterface: sha512
 
     role_hierarchy:
         ROLE_CUSTOMER: ROLE_USER
@@ -16,7 +16,7 @@ security:
     # http://symfony.com/doc/current/book/security.html#where-do-users-come-from-user-providers
     providers:
         fos_userbundle:
-            id: fos_user.user_provider.username_email
+            id: nucleos_user.user_provider.username_email
         # jwt:
         #     lexik_jwt:
         #         class: AppBundle\Entity\User
@@ -91,15 +91,13 @@ security:
             bearer_token: true
 
         api_time_slots:
-            pattern:   ^/api/time_slots/[0-9]+$
-            methods: [ GET ]
+            pattern:   ^/api/time_slots
             stateless: true
             anonymous: ~
             bearer_token: true
 
-        api_pricing_calculate_price:
-            pattern:   ^/api/pricing/calculate-price
-            methods: [ GET ]
+        api_retail_prices_calculate:
+            pattern:   ^/api/retail_prices/calculate
             stateless: true
             anonymous: ~
             bearer_token: true
@@ -144,6 +142,11 @@ security:
             methods: [ GET ]
             stateless: true
             anonymous: ~
+            bearer_token: true
+
+        api_webhooks:
+            pattern:   ^/api/webhooks
+            stateless: true
             bearer_token: true
 
         token_refresh:

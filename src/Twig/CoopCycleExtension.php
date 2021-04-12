@@ -6,6 +6,7 @@ use ApiPlatform\Core\Api\IriConverterInterface;
 use AppBundle\Entity\Address;
 use AppBundle\OpeningHours\SpatieOpeningHoursRegistry;
 use AppBundle\Sylius\Product\ProductOptionInterface;
+use AppBundle\Twig\CacheExtension\KeyGenerator;
 use Carbon\Carbon;
 use Carbon\Translator as CarbonTranslator;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -62,6 +63,8 @@ class CoopCycleExtension extends AbstractExtension
             new TwigFilter('opening_hours', array($this, 'openingHours')),
             new TwigFilter('day_localized', array($this, 'dayLocalized')),
             new TwigFilter('opening_hours_for_day_matches', array($this, 'openingHoursForDayMatches')),
+            new TwigFilter('cache_key', array(KeyGenerator::class, 'generateKey')),
+            new TwigFilter('parse_expression', array(ExpressionLanguageRuntime::class, 'parseExpression')),
         );
     }
 
@@ -83,9 +86,9 @@ class CoopCycleExtension extends AbstractExtension
             new TwigFunction('coopcycle_has_about_us', array(AppearanceRuntime::class, 'hasAboutUs')),
             new TwigFunction('coopcycle_has_banner', array(AssetsRuntime::class, 'hasCustomBanner')),
             new TwigFunction('coopcycle_restaurants_suggestions', array(LocalBusinessRuntime::class, 'restaurantsSuggestions')),
-            new TwigFunction('coopcycle_hub_resolve', array(LocalBusinessRuntime::class, 'resolveHub')),
             new TwigFunction('coopcycle_has_ordering_delay', array(OrderRuntime::class, 'hasDelayConfigured')),
             new TwigFunction('coopcycle_bounding_rect', array(SettingResolver::class, 'getBoundingRect')),
+            new TwigFunction('coopcycle_checkout_suggestions', array(LocalBusinessRuntime::class, 'getCheckoutSuggestions')),
         );
     }
 
@@ -122,9 +125,11 @@ class CoopCycleExtension extends AbstractExtension
             $groups = ['address'];
         }
 
-        $context = [
-            'groups' => $groups,
-        ];
+        $context = [];
+
+        if (!empty($groups)) {
+           $context['groups'] = $groups;
+        }
 
         if ('jsonld' === $format) {
             $context = array_merge($context, [

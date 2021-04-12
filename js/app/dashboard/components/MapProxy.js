@@ -5,6 +5,9 @@ import 'leaflet.markercluster'
 import 'leaflet-area-select'
 import React from 'react'
 import { render } from 'react-dom'
+import moment from 'moment'
+import { Badge } from 'antd'
+
 import MapHelper from '../../MapHelper'
 import LeafletPopupContent from './LeafletPopupContent'
 import CourierPopupContent from './CourierPopupContent'
@@ -15,7 +18,11 @@ const tagsColor = tags => {
   return tag.color
 }
 
-const taskColor = task => {
+const taskColor = (task, selected) => {
+
+  if (selected) {
+    return '#EEB516'
+  }
 
   if (task.group && task.group.tags.length > 0) {
     return tagsColor(task.group.tags)
@@ -69,6 +76,71 @@ const createIcon = username => {
   })
 }
 
+class GroupPopupContent extends React.Component {
+
+  constructor (props) {
+    super(props)
+    this.state = {
+      tasks: this.props.tasks
+    }
+  }
+
+  updateTasks(tasks) {
+    this.setState({ tasks })
+  }
+
+  render() {
+
+    return (
+      <div>
+        <div className="mb-2">
+          <strong>{ this.props.restaurant.name }</strong>
+        </div>
+        <ul className="list-unstyled">
+        { this.state.tasks.map(task =>
+          <li key={ task['@id'] } className="py-1">
+            <a href="#" onClick={ (e) => {
+              e.preventDefault()
+              this.props.onEditClick(task)
+            }}
+            >
+              <strong className="mr-2">{ `#${task.id}` }</strong>
+              <span className="text-muted">
+                { `${moment(task.after).format('LT')} — ${moment(task.before).format('LT')}` }
+              </span>
+            </a>
+          </li>
+        )}
+        </ul>
+      </div>
+    )
+  }
+}
+
+class RestaurantIcon extends React.Component {
+
+  constructor (props) {
+    super(props)
+    this.state = {
+      count: this.props.count
+    }
+  }
+
+  updateCount(count) {
+    this.setState({ count })
+  }
+
+  render () {
+    return (
+      <Badge count={ this.state.count } size="small" offset={[ -4, 4 ]}>
+        <div style={{ width: '32px', height: '32px', border: '2px solid #333', borderRadius: '50%' }}>
+          <img src={ this.props.image } className="img-circle" width="28" height="28" />
+        </div>
+      </Badge>
+    )
+  }
+}
+
 export default class MapProxy {
 
   constructor(map, options) {
@@ -79,6 +151,10 @@ export default class MapProxy {
     this.taskMarkers = new Map()
     this.taskPopups = new Map()
     this.taskConnectCircles = new Map()
+
+    this.pickupGroupMarkers = new Map()
+    this.pickupGroupPopups = new Map()
+    this.pickupGroupIcons = new Map()
 
     this.courierMarkers = new Map()
     this.courierPopups = new Map()
@@ -128,11 +204,11 @@ export default class MapProxy {
 
   }
 
-  addTask(task, markerColor) {
+  addTask(task, selected = false) {
 
     let marker = this.taskMarkers.get(task['id'])
 
-    const color = markerColor || taskColor(task)
+    const color = taskColor(task, selected)
     const iconName = taskIcon(task)
     const coords = [task.address.geo.latitude, task.address.geo.longitude]
     const latLng = L.latLng(task.address.geo.latitude, task.address.geo.longitude)
@@ -203,6 +279,77 @@ export default class MapProxy {
 
     this.tasksLayerGroup.addLayer(marker)
     this.clusterGroup.addLayer(marker)
+  }
+
+  addGroup(group/*, selected*/) {
+
+    let marker = this.pickupGroupMarkers.get(group.restaurant['@id'])
+    let popupComponent = this.pickupGroupPopups.get(group.restaurant['@id'])
+    let iconComponent = this.pickupGroupIcons.get(group.restaurant['@id'])
+
+    // FIXME
+    // There is a race condition here,
+    // because addGroup() can be called repeatedly with the same group
+    // As the popup is added to pickupGroupPopups asynchronously,
+    // it may be not ready yet when called again
+    if (!marker) {
+
+      const latLng = L.latLng(
+        group.tasks[0].address.geo.latitude,
+        group.tasks[0].address.geo.longitude
+      )
+
+      const iconEl = document.createElement('div')
+      iconComponent = React.createRef()
+
+      const onIconRendered = () => {
+        this.pickupGroupIcons.set(group.restaurant['@id'], iconComponent)
+      }
+
+      render(<RestaurantIcon
+        ref={ iconComponent }
+        image={ group.restaurant.image }
+        count={ group.tasks.length } />, iconEl, onIconRendered)
+
+      marker = L.marker(latLng, {
+        icon: L.divIcon({
+          // Make sure to remove the default CSS class "leaflet-div-icon"
+          className: '',
+          html: iconEl,
+          iconSize: L.point(32, 32),
+        })
+      })
+
+      this.pickupGroupMarkers.set(group.restaurant['@id'], marker)
+
+      const el = document.createElement('div')
+      popupComponent = React.createRef()
+
+      const onPopupRendered = () => {
+        this.pickupGroupPopups.set(group.restaurant['@id'], popupComponent)
+      }
+
+      render(<GroupPopupContent
+        ref={ popupComponent }
+        restaurant={ group.restaurant }
+        tasks={ group.tasks }
+        onEditClick={ this.onEditClick } />, el, onPopupRendered)
+
+      const popup = L.popup({
+        offset: [ 0, -15 ]
+      })
+        .setContent(el)
+
+      marker.bindPopup(popup)
+
+      marker.addTo(this.map)
+
+    } else {
+      // TODO Queue properly calls to addGroup()
+      // TODO Manage selected state (add border)
+      popupComponent && popupComponent.current.updateTasks(group.tasks)
+      iconComponent && iconComponent.current.updateCount(group.tasks.length)
+    }
   }
 
   enableConnect(task, active = false) {
@@ -337,19 +484,16 @@ export default class MapProxy {
     layerGroup.addLayer(decorator)
   }
 
-  showPolyline(username) {
-    this.getPolylineLayerGroup(username).addTo(this.map)
+  showPolyline(username, style = 'normal') {
+    if (style === 'as_the_crow_flies') {
+      this.getPolylineAsTheCrowFliesLayerGroup(username).addTo(this.map)
+    } else {
+      this.getPolylineLayerGroup(username).addTo(this.map)
+    }
   }
 
   hidePolyline(username) {
     this.getPolylineLayerGroup(username).removeFrom(this.map)
-  }
-
-  showPolylineAsTheCrowFlies(username) {
-    this.getPolylineAsTheCrowFliesLayerGroup(username).addTo(this.map)
-  }
-
-  hidePolylineAsTheCrowFlies(username) {
     this.getPolylineAsTheCrowFliesLayerGroup(username).removeFrom(this.map)
   }
 
@@ -374,10 +518,19 @@ export default class MapProxy {
         username={ username }
         lastSeen={ lastSeen } />, popupContent, cb)
 
-      marker.bindPopup(popupContent, {
-        offset: [ 3, 70 ],
-        minWidth: 150,
-      })
+      const tooltip = L.tooltip({
+        offset: [ 0, -15 ],
+        direction: 'top'
+      }).setContent(popupContent)
+
+      marker.bindTooltip(tooltip)
+      marker
+        .on('tooltipopen', () => {
+          this.showPolyline(username, 'as_the_crow_flies')
+        })
+        .on('tooltipclose', () => {
+          this.hidePolyline(username)
+        })
 
       marker.setOpacity(offline ? 0.5 : 1)
 

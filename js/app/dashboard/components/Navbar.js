@@ -5,8 +5,8 @@ import moment from 'moment'
 import { DatePicker } from 'antd'
 import _ from 'lodash'
 
-import { openFiltersModal, resetFilters, openSettings, openImportModal } from '../redux/actions'
-import { selectSelectedDate } from '../../coopcycle-frontend-js/dispatch/redux'
+import { openFiltersModal, resetFilters, openSettings, openImportModal, openExportModal } from '../redux/actions'
+import { selectSelectedDate } from '../../coopcycle-frontend-js/logistics/redux'
 
 class Navbar extends React.Component {
 
@@ -42,6 +42,11 @@ class Navbar extends React.Component {
   _onImportClick(e) {
     e.preventDefault()
     this.props.openImportModal()
+  }
+
+  _onExportClick(e) {
+    e.preventDefault()
+    this.props.openExportModal()
   }
 
   renderFilters() {
@@ -120,12 +125,12 @@ class Navbar extends React.Component {
                 </div>
               </li>
               <li>
-                <a href="#" data-toggle="modal" data-target="#export-modal">
+                <a href="#" onClick={ this._onExportClick.bind(this) }>
                   <i className="fa fa-download" aria-hidden="true"></i> { this.props.t('ADMIN_DASHBOARD_NAV_EXPORT') }
                 </a>
               </li>
               <li>
-                <a href="#"  onClick={ this._onImportClick.bind(this) }>
+                <a href="#" onClick={ this._onImportClick.bind(this) }>
                   <i className="fa fa-upload" aria-hidden="true"></i> { this.props.t('ADMIN_DASHBOARD_NAV_IMPORT') }
                 </a>
               </li>
@@ -160,15 +165,15 @@ function mapStateToProps(state) {
     date: selectedDate,
     prev: window.Routing.generate('admin_dashboard_fullscreen', {
       date: moment(selectedDate).subtract(1, 'days').format('YYYY-MM-DD'),
-      nav: state.nav
+      nav: state.config.nav
     }),
     next: window.Routing.generate('admin_dashboard_fullscreen', {
       date: moment(selectedDate).add(1, 'days').format('YYYY-MM-DD'),
-      nav: state.nav
+      nav: state.config.nav
     }),
     imports: state.imports,
-    nav: state.nav,
-    isDefaultFilters: state.isDefaultFilters,
+    nav: state.config.nav,
+    isDefaultFilters: state.settings.isDefaultFilters,
     taskImportToken: state.taskImportToken,
   }
 }
@@ -180,6 +185,7 @@ function mapDispatchToProps(dispatch) {
     resetFilters: () => dispatch(resetFilters()),
     openSettings: () => dispatch(openSettings()),
     openImportModal: () => dispatch(openImportModal()),
+    openExportModal: () => dispatch(openExportModal()),
   }
 }
 

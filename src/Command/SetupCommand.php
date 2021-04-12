@@ -3,7 +3,6 @@
 namespace AppBundle\Command;
 
 use AppBundle\Entity\Cuisine;
-use AppBundle\Entity\Sylius\OrderView;
 use AppBundle\Entity\Sylius\TaxCategory;
 use AppBundle\Service\SettingsManager;
 use AppBundle\Service\StripeManager;
@@ -31,6 +30,7 @@ use Sylius\Component\Promotion\Model\PromotionAction;
 use Sylius\Component\Promotion\Repository\PromotionRepositoryInterface;
 use Sylius\Component\Taxation\Repository\TaxCategoryRepositoryInterface;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Logger\ConsoleLogger;
@@ -250,9 +250,6 @@ class SetupCommand extends Command
 
         $output->writeln('<info>Configuring Stripe webhook endpoint…</info>');
         $this->configureStripeWebhooks($output);
-
-        $output->writeln('<info>Creating view for order stats…</info>');
-        $this->createOrderStatsView($output);
 
         return 0;
     }
@@ -587,10 +584,5 @@ class SetupCommand extends Command
 
             $output->writeln('Stripe webhook endpoint created');
         }
-    }
-
-    private function createOrderStatsView(OutputInterface $output)
-    {
-        OrderView::create($this->doctrine->getConnection());
     }
 }

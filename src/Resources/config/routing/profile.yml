@@ -320,6 +320,7 @@ dashboard_delivery:
       layout: 'dashboard.html.twig'
       routes:
           success: dashboard
+          back: dashboard
   methods:  [ GET, POST ]
 
 dashboard_stores:
@@ -364,6 +365,7 @@ dashboard_store_delivery_new:
             stores: dashboard_stores
             store: dashboard_store
             success: dashboard_store_deliveries
+            back: dashboard
         show_left_menu: false
     methods:  [ GET, POST ]
 
@@ -375,6 +377,7 @@ dashboard_store_address_new:
         routes:
             stores: dashboard_stores
             store: dashboard_store
+            store_addresses: dashboard_store_addresses
     methods:  [ GET, POST ]
 
 dashboard_store_address:
@@ -385,6 +388,7 @@ dashboard_store_address:
         routes:
             stores: dashboard_stores
             store: dashboard_store
+            store_addresses: dashboard_store_addresses
     methods:  [ GET, POST ]
 
 dashboard_store_addresses:

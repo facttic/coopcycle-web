@@ -2,7 +2,10 @@ cube(`Order`, {
   sql: `SELECT * FROM public.sylius_order`,
 
   joins: {
-
+    Vendor: {
+      relationship: `hasOne`,
+      sql: `${Order}.vendor_id = ${Vendor}.id`
+    },
   },
 
   measures: {
@@ -22,8 +25,9 @@ cube(`Order`, {
     },
 
     total: {
-      sql: `total`,
-      type: `sum`
+      sql: `ROUND(total / 100::numeric, 2)`,
+      type: `sum`,
+      format: `currency`
     }
   },
 

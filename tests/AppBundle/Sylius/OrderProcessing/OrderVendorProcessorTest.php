@@ -6,22 +6,27 @@ use AppBundle\Entity\Hub;
 use AppBundle\Entity\LocalBusiness;
 use AppBundle\Entity\StripeAccount;
 use AppBundle\Entity\Sylius\Order;
+use AppBundle\Entity\Sylius\OrderVendor;
 use AppBundle\Entity\Sylius\Payment;
 use AppBundle\Entity\Vendor;
 use AppBundle\Sylius\Order\AdjustmentInterface;
 use AppBundle\Sylius\Order\OrderInterface;
+use AppBundle\Sylius\Order\OrderItemInterface;
 use AppBundle\Sylius\OrderProcessing\OrderVendorProcessor;
+use AppBundle\Sylius\Product\ProductInterface;
+use AppBundle\Sylius\Product\ProductVariantInterface;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\TestCase;
 use Prophecy\Argument;
 use Prophecy\PhpUnit\ProphecyTrait;
 use Psr\Log\NullLogger;
 use Sylius\Component\Order\Model\Adjustment;
-use Sylius\Component\Order\Model\OrderItemInterface;
 use Sylius\Component\Promotion\Model\Promotion;
 use Sylius\Component\Promotion\Model\PromotionAction;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
-class OrderVendorProcessorTest extends KernelTestCase
+class OrderVendorProcessorTest extends TestCase
 {
     use ProphecyTrait;
 
@@ -30,26 +35,15 @@ class OrderVendorProcessorTest extends KernelTestCase
 
     public function setUp(): void
     {
-        parent::setUp();
-
-        self::bootKernel();
-
-        $this->translator = $this->prophesize(TranslatorInterface::class);
-
-        $this->translator
-            ->trans(Argument::type('string'))
-            ->willReturn('Foo');
-
-        $this->adjustmentFactory = static::$kernel->getContainer()->get('sylius.factory.adjustment');
+        $this->entityManager = $this->prophesize(EntityManagerInterface::class);
 
         $this->orderProcessor = new OrderVendorProcessor(
-            $this->adjustmentFactory,
-            $this->translator->reveal(),
+            $this->entityManager->reveal(),
             new NullLogger()
         );
     }
 
-    private function createRestaurant($originCode, $stripeUserId = null, $paysStripeFee = true)
+    private function createRestaurant($originCode, $stripeUserId = null, $paysStripeFee = true, ?Hub $hub = null)
     {
         $restaurant = $this->prophesize(LocalBusiness::class);
 
@@ -69,40 +63,292 @@ class OrderVendorProcessorTest extends KernelTestCase
                 ->willReturn(null);
         }
 
+        if (null !== $hub) {
+            $restaurant->belongsToHub()->willReturn(true);
+            $restaurant->getHub()->willReturn($hub);
+        } else {
+            $restaurant->belongsToHub()->willReturn(false);
+        }
+
         return $restaurant->reveal();
     }
 
-    private function createOrderItem($total)
+    private function createOrderItem(ProductInterface $product, int $total = 0)
     {
-        $orderItem = $this->prophesize(OrderItemInterface::class);
-        $orderItem
+        $item = $this->prophesize(OrderItemInterface::class);
+        $variant = $this->prophesize(ProductVariantInterface::class);
+
+        $variant
+            ->getProduct()
+            ->willReturn($product);
+        $item
+            ->getVariant()
+            ->willReturn($variant);
+        $item
             ->getTotal()
             ->willReturn($total);
 
-        $orderItem
-            ->setOrder(Argument::type(OrderInterface::class))
-            ->shouldBeCalled();
-
-        return $orderItem->reveal();
+        return $item->reveal();
     }
 
-    public function testProcessWithHub()
+    public function testProcessDoesNothingWithNoVendor()
     {
-        $restaurant1 = $this->createRestaurant('1', 'acct_123', $paysStripeFee = true);
-        $restaurant2 = $this->createRestaurant('2', 'acct_456', $paysStripeFee = true);
-        $restaurant3 = $this->createRestaurant('3', 'acct_789', $paysStripeFee = true);
-        $restaurant4 = $this->createRestaurant('4', 'acct_987', $paysStripeFee = true);
+        $order = $this->prophesize(OrderInterface::class);
+        $order
+            ->getState()
+            ->willReturn(OrderInterface::STATE_CART);
+        $order
+            ->hasVendor()
+            ->willReturn(false);
+        $order
+            ->getVendors()
+            ->willReturn(new ArrayCollection());
 
-        $hub = $this->prophesize(Hub::class);
-        $hub
-            ->getRestaurants()
-            ->willReturn([ $restaurant1, $restaurant2, $restaurant3, $restaurant4 ]);
+        $order
+            ->addRestaurant(Argument::type(LocalBusiness::class))
+            ->shouldNotBeCalled();
 
-        $vendor = new Vendor();
-        $vendor->setHub($hub->reveal());
+        $this->orderProcessor->process($order->reveal());
+    }
+
+    public function testProcessDoesNothingWithNotCart()
+    {
+        $order = $this->prophesize(OrderInterface::class);
+        $order
+            ->getState()
+            ->willReturn(OrderInterface::STATE_NEW);
+        $order
+            ->hasVendor()
+            ->willReturn(true);
+
+        $order
+            ->addRestaurant(Argument::type(LocalBusiness::class))
+            ->shouldNotBeCalled();
+
+        $this->orderProcessor->process($order->reveal());
+    }
+
+    public function testProcessDoesNothingWithSameVendor()
+    {
+        $restaurant      = $this->createRestaurant('1', 'acct_123', $paysStripeFee = true);
+        $otherRestaurant = $this->createRestaurant('2', 'acct_456', $paysStripeFee = true);
+
+        $product1 = $this->prophesize(ProductInterface::class);
+        $product1->getRestaurant()->willReturn($restaurant);
+
+        $product2 = $this->prophesize(ProductInterface::class);
+        $product2->getRestaurant()->willReturn($restaurant);
+
+        $vendor = Vendor::withRestaurant($restaurant);
 
         $order = $this->prophesize(OrderInterface::class);
+        $order
+            ->getState()
+            ->willReturn(OrderInterface::STATE_CART);
+        $order
+            ->getId()
+            ->willReturn(1);
+        $order
+            ->hasVendor()
+            ->willReturn(true);
+        $order
+            ->isMultiVendor()
+            ->willReturn(false);
+        $order
+            ->getVendor()
+            ->willReturn($vendor);
+        $order
+            ->getVendors()
+            ->willReturn(new ArrayCollection([
+                new OrderVendor($order->reveal(), $restaurant, 2000, 0)
+            ]));
+        $order
+            ->getTotal()
+            ->willReturn(2000);
+        $order
+            ->getFeeTotal()
+            ->willReturn(300);
+        $order
+            ->getPercentageForRestaurant($restaurant)
+            ->willReturn(1.0);
 
+        $order
+            ->getItems()
+            ->willReturn(new ArrayCollection([
+                $this->createOrderItem($product1->reveal()),
+                $this->createOrderItem($product2->reveal()),
+            ]));
+
+        $order
+            ->addRestaurant($restaurant, 0, 1700)
+            ->shouldBeCalled();
+
+        $order->setVendor(Argument::that(function (Vendor $vnd) use ($vendor) {
+            return $vendor === $vnd;
+        }))->shouldBeCalled();
+
+        $this->orderProcessor->process($order->reveal());
+    }
+
+    public function testProcessDowngradesVendorWithOtherRestaurant()
+    {
+        $restaurant      = $this->createRestaurant('1', 'acct_123', $paysStripeFee = true);
+        $otherRestaurant = $this->createRestaurant('2', 'acct_456', $paysStripeFee = true);
+
+        $product1 = $this->prophesize(ProductInterface::class);
+        $product1->getRestaurant()->willReturn($restaurant);
+
+        $product2 = $this->prophesize(ProductInterface::class);
+        $product2->getRestaurant()->willReturn($restaurant);
+
+        $order = $this->prophesize(OrderInterface::class);
+        $order
+            ->getState()
+            ->willReturn(OrderInterface::STATE_CART);
+        $order
+            ->getId()
+            ->willReturn(1);
+        $order
+            ->hasVendor()
+            ->willReturn(true);
+        $order
+            ->isMultiVendor()
+            ->willReturn(false);
+        $order
+            ->getVendor()
+            ->willReturn(
+                Vendor::withRestaurant($otherRestaurant)
+            );
+        $order
+            ->getVendors()
+            ->willReturn(new ArrayCollection([
+                new OrderVendor($order->reveal(), $otherRestaurant, 2000, 0)
+            ]));
+        $order
+            ->getTotal()
+            ->willReturn(2000);
+        $order
+            ->getFeeTotal()
+            ->willReturn(300);
+        $order
+            ->getPercentageForRestaurant($restaurant)
+            ->willReturn(1.0);
+        $order
+            ->getItems()
+            ->willReturn(new ArrayCollection([
+                $this->createOrderItem($product1->reveal()),
+                $this->createOrderItem($product2->reveal()),
+            ]));
+
+        $order
+            ->addRestaurant($restaurant, 0, 1700)
+            ->shouldBeCalled();
+
+        $order->setVendor(Argument::that(function (Vendor $vendor) use ($restaurant) {
+            return $vendor->getRestaurant() === $restaurant;
+        }))->shouldBeCalled();
+
+        $this->orderProcessor->process($order->reveal());
+    }
+
+    public function testProcessDowngradesVendorWithHub()
+    {
+        $restaurant      = $this->createRestaurant('1', 'acct_123', $paysStripeFee = true);
+        $otherRestaurant = $this->createRestaurant('2', 'acct_456', $paysStripeFee = true);
+
+        $product1 = $this->prophesize(ProductInterface::class);
+        $product1->getRestaurant()->willReturn($restaurant);
+
+        $product2 = $this->prophesize(ProductInterface::class);
+        $product2->getRestaurant()->willReturn($restaurant);
+
+        $hub = new Hub();
+
+        $order = $this->prophesize(OrderInterface::class);
+        $order
+            ->getState()
+            ->willReturn(OrderInterface::STATE_CART);
+        $order
+            ->getId()
+            ->willReturn(1);
+        $order
+            ->hasVendor()
+            ->willReturn(true);
+        $order
+            ->isMultiVendor()
+            ->willReturn(false);
+        $order
+            ->getVendor()
+            ->willReturn(
+                Vendor::withHub($hub)
+            );
+        $order
+            ->getVendors()
+            ->willReturn(new ArrayCollection([
+                new OrderVendor($order->reveal(), $restaurant, 1000, 0),
+                new OrderVendor($order->reveal(), $otherRestaurant, 1000, 0)
+            ]));
+        $order
+            ->getTotal()
+            ->willReturn(2000);
+        $order
+            ->getFeeTotal()
+            ->willReturn(300);
+        $order
+            ->getPercentageForRestaurant(Argument::type(LocalBusiness::class))
+            ->willReturn(0.5);
+
+        $order
+            ->getItems()
+            ->willReturn(new ArrayCollection([
+                $this->createOrderItem($product1->reveal()),
+                $this->createOrderItem($product2->reveal()),
+            ]));
+
+        $order
+            ->addRestaurant($restaurant, 0, 850)
+            ->shouldBeCalled();
+
+        $order->setVendor(Argument::that(function (Vendor $vendor) use ($restaurant) {
+            return $vendor->getRestaurant() === $restaurant;
+        }))->shouldBeCalled();
+
+        $this->orderProcessor->process($order->reveal());
+    }
+
+    public function testProcessUpgradesVendorAndAddsAdjustments()
+    {
+        $hub = $this->prophesize(Hub::class);
+
+        $restaurant1 = $this->createRestaurant('1', 'acct_123', $paysStripeFee = true, $hub->reveal());
+        $restaurant2 = $this->createRestaurant('2', 'acct_456', $paysStripeFee = true, $hub->reveal());
+        $restaurant3 = $this->createRestaurant('3', 'acct_789', $paysStripeFee = true, $hub->reveal());
+        $restaurant4 = $this->createRestaurant('4', 'acct_987', $paysStripeFee = true, $hub->reveal());
+
+        $hub
+            ->getRestaurants()
+            ->willReturn([
+                $restaurant1,
+                $restaurant2,
+                $restaurant3,
+                $restaurant4
+            ]);
+
+        $vendor = Vendor::withHub($hub->reveal());
+
+        $product1 = $this->prophesize(ProductInterface::class);
+        $product1->getRestaurant()->willReturn($restaurant1);
+
+        $product2 = $this->prophesize(ProductInterface::class);
+        $product2->getRestaurant()->willReturn($restaurant2);
+
+        $product3 = $this->prophesize(ProductInterface::class);
+        $product3->getRestaurant()->willReturn($restaurant3);
+
+        $order = $this->prophesize(OrderInterface::class);
+        $order
+            ->getId()
+            ->willReturn(1);
         $order
             ->getNumber()
             ->willReturn('000001');
@@ -119,11 +365,32 @@ class OrderVendorProcessorTest extends KernelTestCase
             ->hasVendor()
             ->willReturn(true);
         $order
+            ->isMultiVendor()
+            ->willReturn(true);
+        $order
             ->getVendor()
             ->willReturn($vendor);
         $order
+            ->getRestaurants()
+            ->willReturn(new ArrayCollection([
+                $restaurant1,
+                $restaurant2,
+                $restaurant3
+            ]));
+        $order
             ->getVendors()
-            ->willReturn([ $restaurant1, $restaurant2, $restaurant3 ]);
+            ->willReturn(new ArrayCollection([
+                new OrderVendor($order->reveal(), $restaurant1, 1000, 0),
+                new OrderVendor($order->reveal(), $restaurant2, 1000, 0),
+                new OrderVendor($order->reveal(), $restaurant3, 1000, 0),
+            ]));
+        $order
+            ->getItems()
+            ->willReturn(new ArrayCollection([
+                $this->createOrderItem($product1->reveal()),
+                $this->createOrderItem($product2->reveal()),
+                $this->createOrderItem($product3->reveal()),
+            ]));
 
         // Total = 47.00
         // Items = 40.00
@@ -134,19 +401,16 @@ class OrderVendorProcessorTest extends KernelTestCase
         // Vendor 2 = 3960 * 0.1750 =  693
         // Vendor 3 = 3960 * 0.1500 =  594
 
-        $hub
-            ->getPercentageForRestaurant(
-                $order->reveal(),
-                Argument::type(LocalBusiness::class)
-            )
+        $order
+            ->getPercentageForRestaurant(Argument::type(LocalBusiness::class))
             ->will(function ($args) use ($restaurant1, $restaurant2, $restaurant3) {
-                if ($args[1] === $restaurant1) {
+                if ($args[0] === $restaurant1) {
                     return 0.6750;
                 }
-                if ($args[1] === $restaurant2) {
+                if ($args[0] === $restaurant2) {
                     return 0.1750;
                 }
-                if ($args[1] === $restaurant3) {
+                if ($args[0] === $restaurant3) {
                     return 0.1500;
                 }
             });
@@ -158,26 +422,34 @@ class OrderVendorProcessorTest extends KernelTestCase
         $payment->setCharge('ch_123456');
         $payment->setOrder($order->reveal());
 
-        $order
-            ->removeAdjustments(AdjustmentInterface::TRANSFER_AMOUNT_ADJUSTMENT)
-            ->shouldBeCalled();
-
-        $expectations = [
-            '1' => 2673,
-            '2' =>  693,
-            '3' =>  594,
-        ];
+        $expectations = new \SplObjectStorage();
+        $expectations[$restaurant1] = 2673;
+        $expectations[$restaurant2] = 2673;
+        $expectations[$restaurant3] = 2673;
 
         $order
-            ->addAdjustment(Argument::that(function (Adjustment $adjustment) use ($expectations) {
-                if (AdjustmentInterface::TRANSFER_AMOUNT_ADJUSTMENT === $adjustment->getType()) {
-                    return isset($expectations[$adjustment->getOriginCode()]) &&
-                        $expectations[$adjustment->getOriginCode()] === $adjustment->getAmount();
+            ->addRestaurant(
+                Argument::type(LocalBusiness::class),
+                Argument::type('int'),
+                Argument::type('int')
+            )
+            ->should(function ($calls) use ($expectations) {
+                foreach ($calls as $call) {
+                    [ $restaurant, $itemsTotal, $transferAmount ] = $call->getArguments();
+
+                    $expectedTransferAmount = $expectations[$restaurant];
+
+                    if ($expectedTransferAmount !== $transferAmount) {
+                        return false;
+                    }
                 }
 
-                return false;
-            }))
-            ->shouldBeCalledTimes(3);
+                return true;
+            });
+
+        $order->setVendor(Argument::that(function (Vendor $vnd) use ($vendor) {
+            return $vendor === $vnd;
+        }))->shouldBeCalled();
 
         $this->orderProcessor->process($order->reveal());
     }

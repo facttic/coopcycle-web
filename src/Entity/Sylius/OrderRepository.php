@@ -5,11 +5,14 @@ namespace AppBundle\Entity\Sylius;
 use AppBundle\Entity\Delivery;
 use AppBundle\Entity\LocalBusiness;
 use AppBundle\Entity\Refund;
+use AppBundle\Entity\Sylius\Order;
 use AppBundle\Entity\Task;
 use AppBundle\Entity\Vendor;
 use AppBundle\Sylius\Order\OrderInterface;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\Query\ResultSetMapping;
+use Doctrine\ORM\Query\ResultSetMappingBuilder;
 use Sylius\Bundle\OrderBundle\Doctrine\ORM\OrderRepository as BaseOrderRepository;
 use Sylius\Component\Customer\Model\CustomerInterface;
 use Sylius\Component\Promotion\Model\PromotionCouponInterface;
@@ -31,42 +34,64 @@ class OrderRepository extends BaseOrderRepository
         ;
     }
 
-    public function findByDate(\DateTime $date)
+    public function findOrdersByDate(\DateTime $date)
+    {
+        $start = clone $date;
+        $end   = clone $date;
+
+        $start->setTime(0, 0, 0);
+        $end->setTime(23, 59, 59);
+
+        return $this->findOrdersByDateRange($start, $end, $withVendor = true);
+    }
+
+    public function findOrdersByRestaurantAndDateRange(LocalBusiness $restaurant,
+        \DateTime $start,
+        \DateTime $end,
+        bool $includeNewMultiVendorOrders)
     {
         $qb = $this->createQueryBuilder('o');
-        $qb
-            ->andWhere('o.vendor IS NOT NULL')
-            ->andWhere('o.state != :state')
-            ->andWhere('OVERLAPS(o.shippingTimeRange, CAST(:range AS tsrange)) = TRUE')
-            ->setParameter('state', OrderInterface::STATE_CART)
-            ->setParameter('range', sprintf('[%s, %s]', $date->format('Y-m-d 00:00:00'), $date->format('Y-m-d 23:59:59')))
-            ;
+        $qb = self::addVendorClause($qb, 'o', $restaurant);
+        $qb = self::addShippingTimeRangeClause($qb, 'o', $start, $end);
+
+        // We always remove the carts
+        $qb->andWhere($qb->expr()->neq('o.state', ':state_cart'));
+        $qb->setParameter('state_cart', OrderInterface::STATE_CART);
+
+        // When there are multiple vendors,
+        // we filter out the orders with state = new
+        if (!$includeNewMultiVendorOrders) {
+
+            // We build a subquery to find
+            // the new orders with multiple vendors
+            // https://stackoverflow.com/questions/6637506/doing-a-where-in-subquery-in-doctrine-2
+
+            $newOrdersWithMoreThanOneVendor = $this->createQueryBuilder('o2');
+            $newOrdersWithMoreThanOneVendor = self::addVendorClause($newOrdersWithMoreThanOneVendor, 'o2', $restaurant, 'o2v');
+            $newOrdersWithMoreThanOneVendor->select('o2.id');
+            $newOrdersWithMoreThanOneVendor->andWhere('o2.state = :state_new');
+            $newOrdersWithMoreThanOneVendor->groupBy('o2.id');
+            $newOrdersWithMoreThanOneVendor->having('COUNT(o2v.restaurant) > 1');
+            $newOrdersWithMoreThanOneVendor->setParameter('state_new', OrderInterface::STATE_NEW);
+
+            $qb->andWhere(
+                $qb->expr()->notIn('o.id', $newOrdersWithMoreThanOneVendor->getQuery()->getDQL())
+            );
+            $qb->setParameter('state_new', OrderInterface::STATE_NEW);
+        }
 
         return $qb->getQuery()->getResult();
     }
 
-    public function findOrdersByRestaurantAndDateRange(LocalBusiness $restaurant, \DateTime $start, \DateTime $end, $state)
-    {
-        $qb = $this->createQueryBuilder('o');
-        $qb
-            ->join(Vendor::class, 'v', Join::WITH, 'o.vendor = v.id')
-            ->andWhere('v.restaurant = :restaurant')
-            ->andWhere('o.state = :state')
-            ->andWhere('OVERLAPS(o.shippingTimeRange, CAST(:range AS tsrange)) = TRUE')
-            ->setParameter('restaurant', $restaurant)
-            ->setParameter('state', $state)
-            ->setParameter('range', sprintf('[%s, %s]', $start->format('Y-m-d H:i:s'), $end->format('Y-m-d H:i:s')))
-            ->addOrderBy('o.shippingTimeRange', 'DESC')
-            ;
-
-        return $qb;
-    }
-
-    public function findOrdersByDateRange(\DateTime $start, \DateTime $end)
+    public function findOrdersByDateRange(\DateTime $start, \DateTime $end, bool $withVendor = false)
     {
         $qb = $this->createQueryBuilder('o');
 
         $this->addDateRangeClause($qb, $start, $end);
+
+        if ($withVendor) {
+            $qb->andWhere('o.vendor IS NOT NULL');
+        }
 
         $qb
             ->andWhere('o.state != :state_cart')
@@ -213,5 +238,13 @@ class OrderRepository extends BaseOrderRepository
             ;
 
         return $qb->getQuery()->getResult();
+    }
+
+    public static function addVendorClause(QueryBuilder $qb, $alias, LocalBusiness $restaurant, $vendorAlias = 'v')
+    {
+        return $qb
+            ->join(OrderVendor::class, $vendorAlias, Join::WITH, sprintf('%s.id = %s.order', $alias, $vendorAlias))
+            ->andWhere(sprintf('%s.restaurant = :restaurant', $vendorAlias))
+            ->setParameter('restaurant', $restaurant);
     }
 }

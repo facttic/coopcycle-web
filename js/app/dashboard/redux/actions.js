@@ -2,7 +2,7 @@ import _ from 'lodash'
 import axios from 'axios'
 import moment from 'moment'
 
-import { taskComparator, withoutTasks, withLinkedTasks } from './utils'
+import { taskComparator, withoutTasks, withLinkedTasks, isInDateRange } from './utils'
 import {
   selectSelectedDate,
   selectTaskLists,
@@ -10,8 +10,8 @@ import {
   createTaskListRequest,
   createTaskListSuccess,
   createTaskListFailure,
-} from '../../coopcycle-frontend-js/dispatch/redux'
-import { selectNextWorkingDay } from './selectors'
+} from '../../coopcycle-frontend-js/logistics/redux'
+import { selectNextWorkingDay, selectSelectedTasks } from './selectors'
 
 function createClient(dispatch) {
 
@@ -91,14 +91,15 @@ export const OPEN_ADD_USER = 'OPEN_ADD_USER'
 export const CLOSE_ADD_USER = 'CLOSE_ADD_USER'
 export const MODIFY_TASK_LIST_REQUEST = 'MODIFY_TASK_LIST_REQUEST'
 export const MODIFY_TASK_LIST_REQUEST_SUCCESS = 'MODIFY_TASK_LIST_REQUEST_SUCCESS'
-export const TASK_LIST_UPDATED = 'TASK_LIST_UPDATED'
 export const TASK_LISTS_UPDATED = 'TASK_LISTS_UPDATED'
 export const TOGGLE_POLYLINE = 'TOGGLE_POLYLINE'
 export const TOGGLE_TASK = 'TOGGLE_TASK'
 export const SELECT_TASK = 'SELECT_TASK'
 export const SELECT_TASKS = 'SELECT_TASKS'
+export const SELECT_TASKS_BY_IDS = 'SELECT_TASKS_BY_IDS'
 export const CLEAR_SELECTED_TASKS = 'CLEAR_SELECTED_TASKS'
 export const SET_TASK_LIST_GROUP_MODE = 'SET_TASK_LIST_GROUP_MODE'
+export const REMOVE_TASK = 'REMOVE_TASK'
 
 export const SET_GEOLOCATION = 'SET_GEOLOCATION'
 export const SCAN_POSITIONS = 'SCAN_POSITIONS'
@@ -138,6 +139,9 @@ export const IMPORT_ERROR = 'IMPORT_ERROR'
 export const OPEN_IMPORT_MODAL = 'OPEN_IMPORT_MODAL'
 export const CLOSE_IMPORT_MODAL = 'CLOSE_IMPORT_MODAL'
 
+export const OPEN_EXPORT_MODAL = 'OPEN_EXPORT_MODAL'
+export const CLOSE_EXPORT_MODAL = 'CLOSE_EXPORT_MODAL'
+
 export const OPTIMIZE_TASK_LIST = 'OPTIMIZE_TASK_LIST'
 
 export const RIGHT_PANEL_MORE_THAN_HALF = 'RIGHT_PANEL_MORE_THAN_HALF'
@@ -151,11 +155,13 @@ export const UPDATE_RECURRENCE_RULE_SUCCESS = 'UPDATE_RECURRENCE_RULE_SUCCESS'
 export const DELETE_RECURRENCE_RULE_SUCCESS = 'DELETE_RECURRENCE_RULE_SUCCESS'
 export const UPDATE_RECURRENCE_RULE_ERROR = 'UPDATE_RECURRENCE_RULE_ERROR'
 
-function setTaskListsLoading(loading = true) {
+export const DELETE_GROUP_SUCCESS = 'DELETE_GROUP_SUCCESS'
+
+export function setTaskListsLoading(loading = true) {
   return { type: SET_TASK_LISTS_LOADING, loading }
 }
 
-function assignAfter(username, task, after) {
+export function assignAfter(username, task, after) {
 
   return function(dispatch, getState) {
 
@@ -176,7 +182,7 @@ function assignAfter(username, task, after) {
   }
 }
 
-function removeTasks(username, tasks) {
+export function unassignTasks(username, tasks) {
 
   if (!Array.isArray(tasks)) {
     tasks = [ tasks ]
@@ -198,47 +204,47 @@ function removeTasks(username, tasks) {
   }
 }
 
-function updateTask(task) {
+export function _updateTask(task) {
   return {type: UPDATE_TASK, task}
 }
 
-function openAddUserModal() {
+export function openAddUserModal() {
   return {type: OPEN_ADD_USER}
 }
 
-function closeAddUserModal() {
+export function closeAddUserModal() {
   return {type: CLOSE_ADD_USER}
 }
 
-function modifyTaskListRequest(username, tasks) {
+export function modifyTaskListRequest(username, tasks) {
   return { type: MODIFY_TASK_LIST_REQUEST, username, tasks }
 }
 
-function modifyTaskListRequestSuccess(taskList) {
+export function modifyTaskListRequestSuccess(taskList) {
   return { type: MODIFY_TASK_LIST_REQUEST_SUCCESS, taskList }
 }
 
-function setFilterValue(key, value) {
+export function setFilterValue(key, value) {
   return { type: SET_FILTER_VALUE, key, value }
 }
 
-function resetFilters() {
+export function resetFilters() {
   return { type: RESET_FILTERS }
 }
 
-function addImport(token) {
+export function addImport(token) {
   return { type: ADD_IMPORT, token }
 }
 
-function importSuccess(token) {
+export function importSuccess(token) {
   return { type: IMPORT_SUCCESS, token }
 }
 
-function importError(token, message) {
+export function importError(token, message) {
   return { type: IMPORT_ERROR, token, message }
 }
 
-function modifyTaskList(username, tasks) {
+export function modifyTaskList(username, tasks) {
 
   const data = tasks.map((task, index) => ({
     task: task['@id'],
@@ -282,39 +288,39 @@ function modifyTaskList(username, tasks) {
   }
 }
 
-function togglePolyline(username) {
+export function togglePolyline(username) {
   return { type: TOGGLE_POLYLINE, username }
 }
 
-function taskListUpdated(taskList) {
-  return { type: TASK_LIST_UPDATED, taskList }
-}
-
-function taskListsUpdated(taskLists) {
+export function taskListsUpdated(taskLists) {
   return { type: TASK_LISTS_UPDATED, taskLists }
 }
 
-function toggleTask(task, multiple = false) {
+export function toggleTask(task, multiple = false) {
   return { type: TOGGLE_TASK, task, multiple }
 }
 
-function selectTask(task) {
+export function selectTask(task) {
   return { type: SELECT_TASK, task }
 }
 
-function selectTasks(tasks) {
+export function selectTasks(tasks) {
   return { type: SELECT_TASKS, tasks }
 }
 
-function clearSelectedTasks() {
+export function selectTasksByIds(taskIds) {
+  return { type: SELECT_TASKS_BY_IDS, taskIds }
+}
+
+export function clearSelectedTasks() {
   return { type: CLEAR_SELECTED_TASKS }
 }
 
-function setTaskListGroupMode(mode) {
+export function setTaskListGroupMode(mode) {
   return { type: SET_TASK_LIST_GROUP_MODE, mode }
 }
 
-function createTaskList(date, username) {
+export function createTaskList(date, username) {
 
   return function(dispatch) {
 
@@ -336,141 +342,161 @@ function createTaskList(date, username) {
   }
 }
 
-function moveToTop(task) {
+function moveTo(task, direction) {
 
   return function(dispatch, getState) {
 
-    let state = getState()
-    let taskLists = selectTaskLists(state)
-
+    const taskLists = selectTaskLists(getState())
     const taskList = _.find(taskLists, taskList => taskList.username === task.assignedTo)
 
     if (taskList) {
       const newTasks = taskList.items.filter(item => item['@id'] !== task['@id'])
-      newTasks.unshift(task)
+      switch (direction) {
+        case 'top':
+          newTasks.unshift(task)
+          break
+        case 'bottom':
+          newTasks.push(task)
+          break
+      }
       dispatch(modifyTaskList(taskList.username, newTasks))
     }
   }
 }
 
-function moveToBottom(task) {
+export function moveToTop(task) {
 
-  return function(dispatch, getState) {
+  return function(dispatch) {
 
-    let state = getState()
-    let taskLists = selectTaskLists(state)
-
-    const taskList = _.find(taskLists, taskList => taskList.username === task.assignedTo)
-
-    if (taskList) {
-      const newTasks = taskList.items.filter(item => item['@id'] !== task['@id'])
-      newTasks.push(task)
-      dispatch(modifyTaskList(taskList.username, newTasks))
-    }
+    dispatch(moveTo(task, 'top'))
   }
 }
 
-function setGeolocation(username, coords, timestamp) {
+export function moveToBottom(task) {
+
+  return function(dispatch) {
+
+    dispatch(moveTo(task, 'bottom'))
+  }
+}
+
+export function setGeolocation(username, coords, timestamp) {
   return { type: SET_GEOLOCATION, username, coords, timestamp }
 }
 
-function scanPositions() {
+export function scanPositions() {
   return { type: SCAN_POSITIONS }
 }
 
-function openNewTaskModal() {
+export function openNewTaskModal() {
   return { type: OPEN_NEW_TASK_MODAL }
 }
 
-function closeNewTaskModal() {
+export function closeNewTaskModal() {
   return { type: CLOSE_NEW_TASK_MODAL }
 }
 
-function setCurrentTask(task) {
+export function setCurrentTask(task) {
   return { type: SET_CURRENT_TASK, task }
 }
 
-function createTaskRequest() {
+export function createTaskRequest() {
   return { type: CREATE_TASK_REQUEST }
 }
 
-function createTaskSuccess(task) {
+export function createTaskSuccess(task) {
   return { type: CREATE_TASK_SUCCESS, task }
 }
 
-function createTaskFailure(error) {
+export function createTaskFailure(error) {
   return { type: CREATE_TASK_FAILURE, error }
 }
 
-function completeTaskFailure(error) {
+export function completeTaskFailure(error) {
   return { type: COMPLETE_TASK_FAILURE, error }
 }
 
-function cancelTaskFailure(error) {
+export function cancelTaskFailure(error) {
   return { type: CANCEL_TASK_FAILURE, error }
 }
 
-function tokenRefreshSuccess(token) {
+export function tokenRefreshSuccess(token) {
   return { type: TOKEN_REFRESH_SUCCESS, token }
 }
 
-function openFiltersModal() {
+export function openFiltersModal() {
   return { type: OPEN_FILTERS_MODAL }
 }
 
-function closeFiltersModal() {
+export function closeFiltersModal() {
   return { type: CLOSE_FILTERS_MODAL }
 }
 
-function toggleSearch() {
+export function toggleSearch() {
   return { type: TOGGLE_SEARCH }
 }
 
-function openSearch() {
+export function openSearch() {
   return { type: OPEN_SEARCH }
 }
 
-function closeSearch() {
+export function closeSearch() {
   return { type: CLOSE_SEARCH }
 }
 
-function openSettings() {
+export function openSettings() {
   return { type: OPEN_SETTINGS }
 }
 
-function closeSettings() {
+export function closeSettings() {
   return { type: CLOSE_SETTINGS }
 }
 
-function setPolylineStyle(style) {
+export function setPolylineStyle(style) {
   return {type: SET_POLYLINE_STYLE, style}
 }
 
-function setClustersEnabled(enabled) {
+export function setClustersEnabled(enabled) {
   return {type: SET_CLUSTERS_ENABLED, enabled}
 }
 
-function loadTaskEventsRequest() {
+export function loadTaskEventsRequest() {
   return { type: LOAD_TASK_EVENTS_REQUEST }
 }
 
-function loadTaskEventsSuccess(task, events) {
+export function loadTaskEventsSuccess(task, events) {
   return { type: LOAD_TASK_EVENTS_SUCCESS, task, events }
 }
 
-function loadTaskEventsFailure(error) {
+export function loadTaskEventsFailure(error) {
   return { type: LOAD_TASK_EVENTS_FAILURE, error }
 }
 
-function openImportModal() {
+export function openImportModal() {
   return { type: OPEN_IMPORT_MODAL }
 }
 
-function closeImportModal() {
+export function closeImportModal() {
   return { type: CLOSE_IMPORT_MODAL }
 }
 
-function createTask(task) {
+export function removeTask(task) {
+  return { type: REMOVE_TASK, task }
+}
+
+export function updateTask(task) {
+  return function(dispatch, getState) {
+    let date = selectSelectedDate(getState())
+
+    if (isInDateRange(task, date)) {
+      dispatch(_updateTask(task))
+    } else {
+      dispatch(removeTask(task))
+    }
+  }
+}
+
+export function createTask(task) {
 
   return function(dispatch, getState) {
 
@@ -519,7 +545,7 @@ function createTask(task) {
   }
 }
 
-function startTask(task) {
+export function startTask(task) {
 
   return function(dispatch, getState) {
 
@@ -548,7 +574,7 @@ function startTask(task) {
   }
 }
 
-function completeTask(task, notes = '', success = true) {
+export function completeTask(task, notes = '', success = true) {
 
   return function(dispatch, getState) {
 
@@ -577,7 +603,7 @@ function completeTask(task, notes = '', success = true) {
   }
 }
 
-function cancelTask(task) {
+export function cancelTask(task) {
 
   return function(dispatch, getState) {
 
@@ -606,7 +632,7 @@ function cancelTask(task) {
   }
 }
 
-function cancelTasks(tasks) {
+export function cancelTasks(tasks) {
 
   return function(dispatch, getState) {
 
@@ -639,7 +665,7 @@ function cancelTasks(tasks) {
   }
 }
 
-function duplicateTask(task) {
+export function duplicateTask(task) {
 
   return function(dispatch, getState) {
 
@@ -668,7 +694,7 @@ function duplicateTask(task) {
   }
 }
 
-function loadTaskEvents(task) {
+export function loadTaskEvents(task) {
 
   return function(dispatch, getState) {
 
@@ -720,7 +746,7 @@ export function optimizeTaskList(taskList) {
   }
 }
 
-function moveTasksToNextDay(tasks) {
+export function moveTasksToNextDay(tasks) {
 
   return function(dispatch, getState) {
 
@@ -760,7 +786,7 @@ function moveTasksToNextDay(tasks) {
   }
 }
 
-function moveTasksToNextWorkingDay(tasks) {
+export function moveTasksToNextWorkingDay(tasks) {
 
   return function(dispatch, getState) {
 
@@ -808,39 +834,39 @@ function moveTasksToNextWorkingDay(tasks) {
   }
 }
 
-function updateRightPanelSize(size) {
+export function updateRightPanelSize(size) {
   return { type: size > 40 ? RIGHT_PANEL_MORE_THAN_HALF : RIGHT_PANEL_LESS_THAN_HALF }
 }
 
-function openNewRecurrenceRuleModal() {
+export function openNewRecurrenceRuleModal() {
   return { type: OPEN_RECURRENCE_RULE_MODAL }
 }
 
-function closeRecurrenceRuleModal() {
+export function closeRecurrenceRuleModal() {
   return { type: CLOSE_RECURRENCE_RULE_MODAL }
 }
 
-function setCurrentRecurrenceRule(recurrenceRule) {
+export function setCurrentRecurrenceRule(recurrenceRule) {
   return { type: SET_CURRENT_RECURRENCE_RULE, recurrenceRule }
 }
 
-function updateRecurrenceRuleRequest() {
+export function updateRecurrenceRuleRequest() {
   return { type: UPDATE_RECURRENCE_RULE_REQUEST }
 }
 
-function updateRecurrenceRuleSuccess(recurrenceRule) {
+export function updateRecurrenceRuleSuccess(recurrenceRule) {
   return { type: UPDATE_RECURRENCE_RULE_SUCCESS, recurrenceRule }
 }
 
-function updateRecurrenceRuleError(message) {
+export function updateRecurrenceRuleError(message) {
   return { type: UPDATE_RECURRENCE_RULE_ERROR, message }
 }
 
-function deleteRecurrenceRuleSuccess(recurrenceRule) {
+export function deleteRecurrenceRuleSuccess(recurrenceRule) {
   return { type: DELETE_RECURRENCE_RULE_SUCCESS, recurrenceRule }
 }
 
-function saveRecurrenceRule(recurrenceRule) {
+export function saveRecurrenceRule(recurrenceRule) {
 
   return function(dispatch, getState) {
 
@@ -883,7 +909,7 @@ function saveRecurrenceRule(recurrenceRule) {
   }
 }
 
-function createTasksFromRecurrenceRule(recurrenceRule) {
+export function createTasksFromRecurrenceRule(recurrenceRule) {
 
   return function(dispatch, getState) {
 
@@ -909,7 +935,7 @@ function createTasksFromRecurrenceRule(recurrenceRule) {
   }
 }
 
-function deleteRecurrenceRule(recurrenceRule) {
+export function deleteRecurrenceRule(recurrenceRule) {
 
   return function(dispatch, getState) {
 
@@ -937,60 +963,163 @@ function deleteRecurrenceRule(recurrenceRule) {
   }
 }
 
-export {
-  assignAfter,
-  updateTask,
-  createTaskList,
-  modifyTaskList,
-  removeTasks,
-  openAddUserModal,
-  closeAddUserModal,
-  togglePolyline,
-  setTaskListGroupMode,
-  toggleTask,
-  selectTask,
-  selectTasks,
-  setGeolocation,
-  openNewTaskModal,
-  closeNewTaskModal,
-  setCurrentTask,
-  createTask,
-  completeTask,
-  cancelTask,
-  duplicateTask,
-  openFiltersModal,
-  closeFiltersModal,
-  setFilterValue,
-  resetFilters,
-  toggleSearch,
-  openSearch,
-  closeSearch,
-  openSettings,
-  closeSettings,
-  setPolylineStyle,
-  cancelTasks,
-  loadTaskEvents,
-  setTaskListsLoading,
-  moveToTop,
-  moveToBottom,
-  openImportModal,
-  closeImportModal,
-  addImport,
-  importSuccess,
-  importError,
-  startTask,
-  setClustersEnabled,
-  taskListUpdated,
-  taskListsUpdated,
-  clearSelectedTasks,
-  scanPositions,
-  moveTasksToNextDay,
-  moveTasksToNextWorkingDay,
-  updateRightPanelSize,
-  closeRecurrenceRuleModal,
-  setCurrentRecurrenceRule,
-  saveRecurrenceRule,
-  createTasksFromRecurrenceRule,
-  openNewRecurrenceRuleModal,
-  deleteRecurrenceRule,
+export function deleteGroupSuccess(group) {
+  return { type: DELETE_GROUP_SUCCESS, group }
+}
+
+export function deleteGroup(group) {
+
+  return function(dispatch, getState) {
+
+    const { jwt } = getState()
+
+    const resourceId = group['@id']
+
+    createClient(dispatch).request({
+      method: 'delete',
+      url: resourceId,
+      headers: {
+        'Authorization': `Bearer ${jwt}`,
+        'Accept': 'application/ld+json',
+        'Content-Type': 'application/ld+json'
+      }
+    })
+      .then(() => dispatch(deleteGroupSuccess(resourceId)))
+      // eslint-disable-next-line no-console
+      .catch(error => console.log(error))
+  }
+}
+
+export function openExportModal() {
+  return { type: OPEN_EXPORT_MODAL }
+}
+
+export function closeExportModal() {
+  return { type: CLOSE_EXPORT_MODAL }
+}
+
+export function exportTasks(start, end) {
+
+  return function(dispatch) {
+
+    dispatch(closeExportModal())
+
+    document.getElementById('task_export_start').value = start
+    document.getElementById('task_export_end').value = end
+    document.querySelector('form[name="task_export"]').submit()
+  }
+}
+
+export function handleDragStart(result) {
+
+  return function(dispatch, getState) {
+
+    const selectedTasks = getState().selectedTasks
+
+    // If the user is starting to drag something that is not selected then we need to clear the selection.
+    // https://github.com/atlassian/react-beautiful-dnd/blob/master/docs/patterns/multi-drag.md#dragging
+    const isDraggableSelected = selectedTasks.includes(result.draggableId)
+
+    if (!isDraggableSelected) {
+      dispatch(clearSelectedTasks())
+    }
+  }
+}
+
+export function handleDragEnd(result) {
+
+  return function(dispatch, getState) {
+
+    // dropped nowhere
+    if (!result.destination) {
+      return;
+    }
+
+    const source = result.source;
+    const destination = result.destination;
+
+    // reodered inside the unassigned list, do nothing
+    if (
+      source.droppableId === destination.droppableId &&
+      source.droppableId === 'unassigned'
+    ) {
+      return;
+    }
+
+    // did not move anywhere - can bail early
+    if (
+      source.droppableId === destination.droppableId &&
+      source.index === destination.index
+    ) {
+      return;
+    }
+
+    // cannot unassign by drag'n'drop atm
+    if (source.droppableId.startsWith('assigned:') && destination.droppableId === 'unassigned') {
+      return
+    }
+
+    const allTasks = selectAllTasks(getState())
+    const taskLists = selectTaskLists(getState())
+    const selectedTasks = selectSelectedTasks(getState())
+
+    const username = destination.droppableId.replace('assigned:', '')
+    const taskList = _.find(taskLists, tl => tl.username === username)
+    const newTasks = [ ...taskList.items ]
+
+    if (selectedTasks.length > 1) {
+
+      // FIXME Manage linked tasks
+      // FIXME
+      // The tasks are dropped in the order they were selected
+      // Instead, we should respect the order of the unassigned tasks
+
+      Array.prototype.splice.apply(newTasks,
+        Array.prototype.concat([ result.destination.index, 0 ], selectedTasks))
+
+    } else if (result.draggableId.startsWith('group:')) {
+
+      const groupEl = document.querySelector(`[data-rbd-draggable-id="${result.draggableId}"]`)
+
+      const tasksFromGroup = Array
+        .from(groupEl.querySelectorAll('[data-task-id]'))
+        .map(el => _.find(allTasks, t => t['@id'] === el.getAttribute('data-task-id')))
+
+      Array.prototype.splice.apply(newTasks,
+        Array.prototype.concat([ result.destination.index, 0 ], tasksFromGroup))
+
+    } else {
+
+      // Reorder inside same list
+      if (source.droppableId === destination.droppableId) {
+        const [ removed ] = newTasks.splice(result.source.index, 1);
+        newTasks.splice(result.destination.index, 0, removed)
+      } else {
+
+        const task = _.find(allTasks, t => t['@id'] === result.draggableId)
+
+        newTasks.splice(result.destination.index, 0, task)
+
+        if (task && task.previous) {
+          // If previous task is another day, will be null
+          const previousTask = _.find(allTasks, t => t['@id'] === task.previous)
+          if (previousTask) {
+            Array.prototype.splice.apply(newTasks,
+              Array.prototype.concat([ result.destination.index, 0 ], previousTask))
+          }
+        } else if (task && task.next) {
+          // If next task is another day, will be null
+          const nextTask = _.find(allTasks, t => t['@id'] === task.next)
+          if (nextTask) {
+            Array.prototype.splice.apply(newTasks,
+              Array.prototype.concat([ result.destination.index + 1, 0 ], nextTask))
+          }
+        }
+
+      }
+
+    }
+
+    dispatch(modifyTaskList(username, newTasks))
+  }
 }

@@ -3,6 +3,7 @@
 namespace AppBundle\Controller;
 
 use ApiPlatform\Core\Api\IriConverterInterface;
+use AppBundle\Annotation\HideSoftDeleted;
 use AppBundle\Controller\Utils\AccessControlTrait;
 use AppBundle\Controller\Utils\AdminDashboardTrait;
 use AppBundle\Controller\Utils\DeliveryTrait;
@@ -52,11 +53,11 @@ use AppBundle\Form\PricingRuleSetType;
 use AppBundle\Form\RestaurantAdminType;
 use AppBundle\Form\SettingsType;
 use AppBundle\Form\StripeLivemodeType;
+use AppBundle\Form\Type\TimeSlotChoiceType;
 use AppBundle\Form\Sylius\Promotion\CreditNoteType;
 use AppBundle\Form\TimeSlotType;
 use AppBundle\Form\UpdateProfileType;
 use AppBundle\Form\ZoneCollectionType;
-use AppBundle\Mailer\FOSUserBundleMailer;
 use AppBundle\Service\ActivityManager;
 use AppBundle\Service\DeliveryManager;
 use AppBundle\Service\EmailManager;
@@ -74,9 +75,10 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\ORM\Query\Expr;
-use FOS\UserBundle\Model\UserManagerInterface;
-use FOS\UserBundle\Util\TokenGeneratorInterface;
-use FOS\UserBundle\Util\CanonicalizerInterface;
+use Nucleos\UserBundle\Model\UserManagerInterface;
+use Nucleos\UserBundle\Util\TokenGeneratorInterface;
+use Nucleos\UserBundle\Util\CanonicalizerInterface;
+use Nucleos\ProfileBundle\Mailer\Mail\RegistrationMail;
 use GuzzleHttp\Client as HttpClient;
 use Knp\Component\Pager\PaginatorInterface;
 use Ramsey\Uuid\Uuid;
@@ -92,6 +94,8 @@ use Sylius\Component\Resource\Factory\FactoryInterface;
 use Sylius\Component\Taxation\Resolver\TaxRateResolverInterface;
 use Sylius\Component\Taxation\Repository\TaxCategoryRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bridge\Twig\Mime\BodyRenderer;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -103,6 +107,7 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Twig\Environment as TwigEnvironment;
 
 class AdminController extends AbstractController
 {
@@ -176,7 +181,7 @@ class AdminController extends AbstractController
             ->andWhere('o.state != :state')
             ->setParameter('state', OrderInterface::STATE_CART)
             ->orderBy('LOWER(o.shippingTimeRange)', 'DESC')
-            ->setFirstResult(($request->query->get('p', 1) - 1) * self::ITEMS_PER_PAGE)
+            ->setFirstResult(($request->query->getInt('p', 1) - 1) * self::ITEMS_PER_PAGE)
             ->setMaxResults(self::ITEMS_PER_PAGE)
             ;
 
@@ -298,7 +303,7 @@ class AdminController extends AbstractController
                 }
 
                 if ('fulfill' === $form->getClickedButton()->getName()) {
-                    if ($order->isFoodtech()) {
+                    if ($order->hasVendor()) {
                         throw new BadRequestHttpException(sprintf('Order #%d should not be fulfilled directly', $order->getId()));
                     }
 
@@ -348,7 +353,7 @@ class AdminController extends AbstractController
 
         $date = new \DateTime($date);
 
-        $orders = $this->orderRepository->findByDate($date);
+        $orders = $this->orderRepository->findOrdersByDate($date);
 
         $ordersNormalized = $this->get('serializer')->normalize($orders, 'jsonld', [
             'resource_class' => Order::class,
@@ -606,7 +611,7 @@ class AdminController extends AbstractController
             ->getQuery()->getSingleScalarResult();
 
         $pages = ceil($countAll / self::ITEMS_PER_PAGE);
-        $page = $request->query->get('p', 1);
+        $page = $request->query->getInt('p', 1);
 
         $offset = self::ITEMS_PER_PAGE * ($page - 1);
 
@@ -670,9 +675,11 @@ class AdminController extends AbstractController
             return $response;
         }
 
-        $qb = $this->getDoctrine()
+        $sections = $this->getDoctrine()
             ->getRepository(Delivery::class)
-            ->createQueryBuilder('d');
+            ->getSections();
+
+        $qb = $sections['past'];
 
         // Allow filtering by store & restaurant with KnpPaginator
         $qb->leftJoin(Store::class, 's', Expr\Join::WITH, 's.id = d.store');
@@ -694,6 +701,8 @@ class AdminController extends AbstractController
         );
 
         return $this->render('admin/deliveries.html.twig', [
+            'today' => $sections['today']->getQuery()->getResult(),
+            'upcoming' => $sections['upcoming']->getQuery()->getResult(),
             'deliveries' => $deliveries,
             'routes' => $this->getDeliveryRoutes(),
             'stores' => $this->getDoctrine()->getRepository(Store::class)->findBy([], ['name' => 'ASC']),
@@ -1559,24 +1568,24 @@ class AdminController extends AbstractController
     /**
      * @Route("/admin/emails", name="admin_email_preview")
      */
-    public function emailsPreviewAction(Request $request, FOSUserBundleMailer $mailer)
+    public function emailsPreviewAction(Request $request, TwigEnvironment $twig)
     {
-        $method = 'sendConfirmationEmailMessage';
-        if ($request->query->has('method')) {
-            $method = $request->query->get('method');
-        }
+        $bodyRenderer = new BodyRenderer($twig);
 
-        $this->getUser()->setConfirmationToken('123456');
+        $message = new RegistrationMail();
 
-        $mailer->enableLogging();
+        $url  = $this->generateUrl(
+            'nucleos_profile_registration_confirm',
+            ['token' => '123456'],
+        );
 
-        call_user_func_array([$mailer, $method], [$this->getUser()]);
-
-        $messages = $mailer->getMessages();
-        $message = current($messages);
+        $message->setUser($this->getUser());
+        $message->setConfirmationUrl($url);
 
         // An email must have a "To", "Cc", or "Bcc" header."
         $message->to('dev@coopcycle.org');
+
+        $bodyRenderer->render($message);
 
         $response = new Response();
         $response->setContent((string) $message->getHtmlBody());
@@ -1701,6 +1710,35 @@ class AdminController extends AbstractController
         $timeSlot = new TimeSlot();
 
         return $this->renderTimeSlotForm($request, $timeSlot, $objectManager);
+    }
+
+    /**
+     * @Route("/admin/settings/time-slots/preview", name="admin_time_slot_preview")
+     */
+    public function timeSlotPreviewAction(Request $request, EntityManagerInterface $objectManager)
+    {
+        $timeSlot = new TimeSlot();
+
+        $form = $this->createForm(TimeSlotType::class, $timeSlot);
+
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted()) {
+
+            $timeSlot = $form->getData();
+
+            $form = $this->createFormBuilder()
+                ->add('example', TimeSlotChoiceType::class, [
+                    'time_slot' => $timeSlot,
+                ])
+                ->getForm();
+
+            return $this->render('admin/time_slot_preview.html.twig', [
+                'form' => $form->createView(),
+            ]);
+        }
+
+        return new Response('', 200);
     }
 
     /**
@@ -1975,6 +2013,71 @@ class AdminController extends AbstractController
 
         return $this->render('admin/hubs.html.twig', [
             'hubs' => $hubs,
+        ]);
+    }
+
+    /**
+     * @HideSoftDeleted
+     */
+    public function restaurantListAction(Request $request, SettingsManager $settingsManager)
+    {
+        $routes = $request->attributes->get('routes');
+
+        $pledgeCount = $this->getDoctrine()
+            ->getRepository(Pledge::class)
+            ->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.state = :state_new')
+            ->setParameter('state_new', 'new')
+            ->getQuery()
+            ->getSingleScalarResult()
+            ;
+
+        $pledgesEnabled = filter_var(
+            $settingsManager->get('enable_restaurant_pledges'),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
+        $pledgeForm = $this->createFormBuilder([
+            'enable_restaurant_pledges' => $pledgesEnabled,
+        ])
+        ->add('enable_restaurant_pledges', CheckboxType::class, [
+            'label' => 'form.settings.enable_restaurant_pledges.label',
+            'required' => false,
+        ])
+        ->getForm();
+
+        $pledgeForm->handleRequest($request);
+
+        if ($pledgeForm->isSubmitted() && $pledgeForm->isValid()) {
+
+            $enabled = $pledgeForm->get('enable_restaurant_pledges')->getData();
+
+            $settingsManager->set('enable_restaurant_pledges', $enabled ? 'yes' : 'no');
+            $settingsManager->flush();
+
+            $this->addFlash(
+                'notice',
+                $this->translator->trans('global.changesSaved')
+            );
+
+            return $this->redirectToRoute('admin_restaurants');
+        }
+
+        [ $restaurants, $pages, $page ] = $this->getRestaurantList($request);
+
+        return $this->render($request->attributes->get('template'), [
+            'layout' => $request->attributes->get('layout'),
+            'restaurants' => $restaurants,
+            'pages' => $pages,
+            'page' => $page,
+            'dashboard_route' => $routes['dashboard'],
+            'menu_taxon_route' => $routes['menu_taxon'],
+            'menu_taxons_route' => $routes['menu_taxons'],
+            'restaurant_route' => $routes['restaurant'],
+            'products_route' => $routes['products'],
+            'pledge_count' => $pledgeCount,
+            'pledge_form' => $pledgeForm->createView(),
         ]);
     }
 }

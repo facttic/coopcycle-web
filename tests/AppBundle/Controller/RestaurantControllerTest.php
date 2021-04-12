@@ -40,6 +40,7 @@ use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 use Symfony\Component\Validator\ConstraintViolationList;
@@ -76,6 +77,7 @@ class RestaurantControllerTest extends WebTestCase
         $this->orderModifier = $this->prophesize(OrderModifierInterface::class);
         $this->orderTimeHelper = $this->prophesize(OrderTimeHelper::class);
         $this->restaurantResolver = $this->prophesize(RestaurantResolver::class);
+        $this->eventDispatcher = $this->prophesize(EventDispatcherInterface::class);
 
         $this->localBusinessRepository = $this->prophesize(LocalBusinessRepository::class);
 
@@ -86,6 +88,13 @@ class RestaurantControllerTest extends WebTestCase
 
         // Use the "real" serializer
         $this->serializer = static::$kernel->getContainer()->get('serializer');
+
+        $this->eventDispatcher
+            ->dispatch(Argument::type('object'), Argument::type('string'))
+            ->will(function ($args) {
+
+                return $args[0];
+            });
 
         $container = $this->prophesize(ContainerInterface::class);
         $container
@@ -165,7 +174,7 @@ class RestaurantControllerTest extends WebTestCase
         $product->isEnabled()->willReturn(true);
         $product->hasOptions()->willReturn(true);
 
-        $restaurant->addProduct($product->reveal());
+        $restaurant->getProducts()->add($product->reveal());
 
         $this->localBusinessRepository->find(1)->willReturn($restaurant);
 
@@ -219,7 +228,8 @@ class RestaurantControllerTest extends WebTestCase
             $cartContext->reveal(),
             $translator->reveal(),
             $this->restaurantResolver->reveal(),
-            $this->optionsPayloadConverter->reveal()
+            $this->optionsPayloadConverter->reveal(),
+            $this->eventDispatcher->reveal()
         );
 
         $this->assertInstanceOf(JsonResponse::class, $response);
@@ -230,16 +240,13 @@ class RestaurantControllerTest extends WebTestCase
         $this->assertArrayHasKey('times', $data);
         $this->assertArrayHasKey('errors', $data);
 
-        $expectedRestaurant = [
-            'id' => 1,
-            'variableCustomerAmountEnabled' => false,
-            'address' => [
-                'latlng' => [48.856613, 2.352222]
-            ],
-            'fulfillmentMethods' => ['delivery']
-        ];
+        $this->assertArrayHasKey('vendor', $data['cart']);
 
-        $this->assertEquals($expectedRestaurant, $data['cart']['restaurant']);
+        $vendor = $data['cart']['vendor'];
+
+        $this->assertEquals(['latlng' => [48.856613, 2.352222]], $vendor['address']);
+        $this->assertEquals(['delivery'], $vendor['fulfillmentMethods']);
+        $this->assertFalse($vendor['variableCustomerAmountEnabled']);
     }
 
     public function testAddProductToCartActionWithRestaurantMismatch(): void
@@ -282,7 +289,7 @@ class RestaurantControllerTest extends WebTestCase
         $product->isEnabled()->willReturn(true);
         $product->hasOptions()->willReturn(true);
 
-        $restaurant->addProduct($product->reveal());
+        $restaurant->getProducts()->add($product->reveal());
 
         $this->localBusinessRepository->find(1)->willReturn($restaurant);
 
@@ -318,7 +325,9 @@ class RestaurantControllerTest extends WebTestCase
             $cartContext->reveal(),
             $translator->reveal(),
             $this->restaurantResolver->reveal(),
-            $this->optionsPayloadConverter->reveal());
+            $this->optionsPayloadConverter->reveal(),
+            $this->eventDispatcher->reveal()
+        );
 
         $this->assertInstanceOf(JsonResponse::class, $response);
 

@@ -506,10 +506,6 @@ form.settings.stripe_secret_key.help: "Create a Stripe account to obtain your <a
 form.settings.stripe_connect_client_id.label: Stripe Connect identifier
 form.settings.stripe_connect_client_id.help: "Get the identifier on the <a href=\"\
   https://dashboard.stripe.com/account/applications/settings\">parameters page</a>\n"
-form.settings.google_api_key.label: Google API key
-form.settings.google_api_key.help: "Create a Google account to obtain your <a href=\"\
-  https://developers.google.com/maps/documentation/javascript/get-api-key?hl=Fr\"\
-  >API key</a>\n"
 form.settings.latlng.label: Geographical coordinates
 form.settings.latlng.help: "Specify the default latitude and longitude. You can get\
   \ it on <a href=\"https://www.latlong.net/\">latlong.net</a>\n"
@@ -1148,3 +1144,24 @@ form.payment.method.name.label: Payment method
 order.export.heading.promotions: Promotions
 stores.address_book: Address book
 store.form.section.settings: Settings
+adminDashboard.hubs.title: Hubs
+adminDashboard.hubs.createNew: Create a new hub
+adminDashboard.hubs.help: Hubs allow to group together shops sharing the same pickup address, like a market for example.
+restaurant.form.edenred_merchant_id.label: Edenred Merchant ID
+restaurant.form.edenred_merchant_id.help: Leave empty to disable Edenred
+restaurants.mode.list: View as list
+restaurants.mode.map: View as map
+order.number: 'Your order has number <strong><span class="text-monospace">%number%</span></strong>'
+adminDashboard.stores.help: Create customer accounts
+adminDashboard.pricing.help: Define rules to calculate the price of a delivery
+adminDashboard.embed.help: Create forms to order deliveries
+adminDashboard.time_slots.help: Set up time slots
+adminDashboard.package_sets.help: Configure the types of goods to transport
+adminDashboard.zones.help: Define geographical areas
+adminDashboard.tags.help: Assign tags and colors to tasks
+form.time_slot.preview_title: Time slot preview
+adminDashboard.api.title: API
+adminDashboard.api.help: Allow to create deliveries programmatically
+checkout.suggestions.continue_shopping_hub: You can continue shopping in other shops of <strong>%name%</strong>
+hub.disclaimer: Order from multiple shops, and we'll deliver everything at once!
+form.adress_book.remember_address: Remember this address

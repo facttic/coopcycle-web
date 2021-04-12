@@ -167,24 +167,7 @@ Feature: Tasks
         "@context":"/api/contexts/Task",
         "@id":"/api/tasks",
         "@type":"hydra:Collection",
-        "hydra:member":[
-          {
-            "@id":"@string@.startsWith('/api/task_events')",
-            "@type":"TaskEvent",
-            "name":"task:created",
-            "data":[],
-            "createdAt":"@string@.isDateTime()"
-          },
-          {
-            "@id":"@string@.startsWith('/api/task_events')",
-            "@type":"TaskEvent",
-            "name":"task:assigned",
-            "data":{
-              "username":"bob"
-            },
-            "createdAt":"@string@.isDateTime()"
-          }
-        ],
+        "hydra:member":@array@,
         "hydra:totalItems":2,
         "hydra:search":{
           "@type":"hydra:IriTemplate",
@@ -1138,7 +1121,8 @@ Feature: Tasks
         "violations":[
           {
             "propertyPath":"type",
-            "message":@string@
+            "message":@string@,
+            "code":null
           }
         ]
       }
@@ -1402,7 +1386,8 @@ Feature: Tasks
         "violations":[
           {
             "propertyPath":"tasks[1]",
-            "message":@string@
+            "message":@string@,
+            "code":null
           }
         ]
       }
@@ -1435,7 +1420,8 @@ Feature: Tasks
         "violations":[
           {
             "propertyPath":"tasks[1].ref",
-            "message":@string@
+            "message":@string@,
+            "code":@string@
           }
         ]
       }
@@ -1511,12 +1497,14 @@ Feature: Tasks
          "hydra:description":@string@,
          "violations":[
             {
-               "propertyPath":"address.geo",
-               "message":@string@
+              "propertyPath":"address.geo",
+              "message":@string@,
+              "code":@string@
             },
             {
-               "propertyPath":"address.streetAddress",
-               "message":@string@
+              "propertyPath":"address.streetAddress",
+              "message":@string@,
+              "code":@string@
             }
          ]
       }

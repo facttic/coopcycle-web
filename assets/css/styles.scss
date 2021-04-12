@@ -300,17 +300,6 @@ h1, h2, h3, h4, h5, h6 {
   background-color: rgba(255, 255, 255, 0.75);
 }
 
-// Custom class to allow scrolling inside modal
-// @see https://github.com/reactjs/react-modal/issues/283
-.ReactModal__Overlay--overflow {
-  @media (max-width: $screen-xs-max) {
-    height: 100vh;
-    .ReactModal__Content {
-      overflow-y: auto;
-    }
-  }
-}
-
 .ReactModal__Content {
   position: absolute;
   top: 50%;
@@ -333,67 +322,6 @@ h1, h2, h3, h4, h5, h6 {
 .ReactModal__Html--open,
 .ReactModal__Body--open {
   overflow: hidden;
-}
-
-// ------------------ Order Timeline ------------------
-
-.order-timeline {
-
-  $bullet-width: 26px;
-
-  &__step {
-
-    padding-bottom: $base-margin-s;
-    opacity: 0.7;
-
-    &__bullet {
-      @include fa-icon();
-      margin-right: $base-margin-s;
-      line-height: $bullet-width;
-      height: $bullet-width;
-      width: $bullet-width;
-      text-align: center;
-      vertical-align: middle;
-      border-radius: 50%;
-      color: #fff;
-      background-color: $main-blue;
-    }
-    &__bullet:before {
-      content: $fa-var-clock-o;
-    }
-
-    &--success &__bullet {
-      background-color: $green;
-    }
-    &--success &__bullet:before {
-      content: $fa-var-check;
-    }
-
-    &--danger &__bullet {
-      background-color: $red;
-    }
-    &--danger &__bullet:before {
-      content: $fa-var-times;
-    }
-
-    &__description {
-      border-left: 1px solid $gray;
-      min-height: 50px;
-      margin: $base-margin-s 0 $base-margin-s ($bullet-width / 2);
-      padding: $base-margin-s;
-      display: none;
-    }
-
-    &--active &__description {
-      display: block;
-    }
-
-    &--active {
-      opacity: 1;
-    }
-
-  }
-
 }
 
 .text-monospace {

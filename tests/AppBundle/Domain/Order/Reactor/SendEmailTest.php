@@ -6,7 +6,6 @@ use AppBundle\Domain\Order\Event;
 use AppBundle\Domain\Order\Reactor\SendEmail;
 use AppBundle\Entity\Hub;
 use AppBundle\Entity\LocalBusiness;
-use AppBundle\Entity\LocalBusinessRepository;
 use AppBundle\Entity\User;
 use AppBundle\Entity\Vendor;
 use AppBundle\Entity\Sylius\Customer;
@@ -36,7 +35,6 @@ class SendEmailTest extends TestCase
         $this->settingsManager = $this->prophesize(SettingsManager::class);
         $this->eventBus = $this->prophesize(MessageBus::class);
         $this->messageBus = $this->prophesize(MessageBusInterface::class);
-        $this->localBusinessRepository = $this->prophesize(LocalBusinessRepository::class);
 
         $this->settingsManager->get('administrator_email')->willReturn('admin@acme.com');
 
@@ -50,8 +48,7 @@ class SendEmailTest extends TestCase
             $this->emailManager->reveal(),
             $this->settingsManager->reveal(),
             $this->eventBus->reveal(),
-            $this->messageBus->reveal(),
-            $this->localBusinessRepository->reveal()
+            $this->messageBus->reveal()
         );
     }
 
@@ -93,8 +90,16 @@ class SendEmailTest extends TestCase
 
         $order = $this->prophesize(OrderInterface::class);
         $order
-            ->isFoodtech()
+            ->hasVendor()
             ->willReturn(true);
+        $order
+            ->isMultiVendor()
+            ->willReturn(false);
+        $order
+            ->getRestaurants()
+            ->willReturn(new ArrayCollection([
+                $restaurant->reveal()
+            ]));
         $order
             ->getCustomer()
             ->willReturn($customer->reveal());
@@ -137,7 +142,7 @@ class SendEmailTest extends TestCase
         call_user_func_array($this->sendEmail, [ new Event\OrderCreated($order->reveal()) ]);
     }
 
-    public function testOrderCreatedWithHub()
+    private function createHubOrder()
     {
         $customer = $this->prophesize(Customer::class);
 
@@ -160,16 +165,23 @@ class SendEmailTest extends TestCase
         $restaurant2->getOwners()->willReturn(new ArrayCollection([ $jane->reveal() ]));
 
         $hub = new Hub();
-        $hub->addRestaurant($restaurant1->reveal());
-        $hub->addRestaurant($restaurant2->reveal());
 
         $product1 = $this->prophesize(ProductInterface::class);
         $product2 = $this->prophesize(ProductInterface::class);
 
         $order = $this->prophesize(OrderInterface::class);
         $order
-            ->isFoodtech()
+            ->hasVendor()
             ->willReturn(true);
+        $order
+            ->isMultiVendor()
+            ->willReturn(true);
+        $order
+            ->getRestaurants()
+            ->willReturn(new ArrayCollection([
+                $restaurant1->reveal(),
+                $restaurant2->reveal()
+            ]));
         $order
             ->getCustomer()
             ->willReturn($customer->reveal());
@@ -183,13 +195,12 @@ class SendEmailTest extends TestCase
                 $this->createOrderItem($product2->reveal()),
             ]));
 
-        $this->localBusinessRepository
-            ->findOneByProduct($product1->reveal())
-            ->willReturn($restaurant1->reveal());
+        return $order;
+    }
 
-        $this->localBusinessRepository
-            ->findOneByProduct($product2->reveal())
-            ->willReturn($restaurant2->reveal());
+    public function testOrderCreatedWithHub()
+    {
+        $order = $this->createHubOrder();
 
         $this->emailManager
             ->createOrderCreatedMessageForCustomer($order->reveal())
@@ -205,7 +216,43 @@ class SendEmailTest extends TestCase
 
         $this->emailManager
             ->sendTo(Argument::type(Email::class), Argument::any())
-            ->shouldBeCalledTimes(4);
+            ->shouldBeCalledTimes(2);
+
+        $this->eventBus
+            ->handle(Argument::that(function (Event\EmailSent $event) {
+
+                $payload = $event->toPayload();
+
+                $emails = [
+                    'bob@example.com',
+                    'jane@example.com',
+                ];
+
+                // Make sure the email is *NOT* sent to vendors
+                // when it is a multi vendor order
+                return isset($payload['recipient']) && !in_array($payload['recipient'], $emails);
+            }))
+            ->shouldBeCalled(4);
+
+        call_user_func_array($this->sendEmail, [ new Event\OrderCreated($order->reveal()) ]);
+    }
+
+    public function testOrderAcceptedWithHub()
+    {
+        $order = $this->createHubOrder();
+
+        $this->emailManager
+            ->createOrderAcceptedMessage($order->reveal())
+            ->willReturn(new Email());
+
+        $this->emailManager
+            ->createOrderCreatedMessageForOwner($order->reveal(), Argument::type(LocalBusiness::class))
+            ->willReturn(new Email())
+            ->shouldBeCalledTimes(2);
+
+        $this->emailManager
+            ->sendTo(Argument::type(Email::class), Argument::any())
+            ->shouldBeCalledTimes(3);
 
         $this->eventBus
             ->handle(Argument::that(function (Event\EmailSent $event) {
@@ -223,7 +270,7 @@ class SendEmailTest extends TestCase
             }))
             ->shouldBeCalled(4);
 
-        call_user_func_array($this->sendEmail, [ new Event\OrderCreated($order->reveal()) ]);
+        call_user_func_array($this->sendEmail, [ new Event\OrderAccepted($order->reveal()) ]);
     }
 
     public function testOrderFulfilled()

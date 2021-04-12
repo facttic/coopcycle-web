@@ -6,9 +6,15 @@ var ESLintPlugin = require('eslint-webpack-plugin')
 Encore
 
   .setOutputPath(__dirname + '/web/build')
+
   .setPublicPath('/build')
 
+  // Use this if you want to debug on a real device
+  // .setPublicPath('http://192.168.0.11:8080')
+  // .setManifestKeyPrefix('/build')
+
   .addEntry('admin-orders', './js/app/admin/orders.js')
+  .addEntry('admin-restaurants', './js/app/admin/restaurants.js')
   .addEntry('common', './js/app/common.js')
   .addEntry('customize-form', './js/app/customize/form.js')
   .addEntry('checkout-summary', './js/app/checkout/summary.js')
@@ -23,6 +29,7 @@ Encore
   .addEntry('notifications', './js/app/notifications/index.js')
   .addEntry('foodtech-dashboard', './js/app/foodtech/dashboard/index.js')
   .addEntry('metrics', './js/app/metrics/index.js')
+  .addEntry('order', './js/app/order/index.js')
   .addEntry('product-form', './js/app/product/form.js')
   .addEntry('product-list', './js/app/product/list.js')
   .addEntry('product-option-form', './js/app/forms/product-option.js')
@@ -39,6 +46,7 @@ Encore
   .addEntry('search-user', './js/app/search/user.js')
   .addEntry('store-form', './js/app/store/form.js')
   .addEntry('task-list', './js/app/delivery/task-list.js')
+  .addEntry('time-slot-form', './js/app/time-slot/form.js')
   .addEntry('user-tracking', './js/app/user/tracking.js')
   .addEntry('user-form', './js/app/user/form.js')
   .addEntry('user-invite', './js/app/user/invite.js')

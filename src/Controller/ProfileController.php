@@ -19,13 +19,13 @@ use AppBundle\Form\OrderType;
 use AppBundle\Form\UpdateProfileType;
 use AppBundle\Form\TaskCompleteType;
 use AppBundle\Service\DeliveryManager;
-use AppBundle\Service\SocketIoManager;
+use AppBundle\Service\TopBarNotifications;
 use AppBundle\Service\OrderManager;
 use AppBundle\Service\TaskManager;
 use AppBundle\Utils\OrderEventCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
-use FOS\UserBundle\Model\UserManagerInterface;
+use Nucleos\UserBundle\Model\UserManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 use Lexik\Bundle\JWTAuthenticationBundle\Security\Authentication\Token\PreAuthenticationJWTUserToken;
@@ -84,7 +84,7 @@ class ProfileController extends AbstractController
             $redirectUri = $this->generateUrl('loopeat_oauth_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
             $redirectAfterUri = $this->generateUrl(
-                'fos_user_profile_show',
+                'nucleos_profile_profile_show',
                 [],
                 UrlGeneratorInterface::ABSOLUTE_URL
             );
@@ -138,7 +138,7 @@ class ProfileController extends AbstractController
 
             $userManager->updateUser($user);
 
-            return $this->redirectToRoute('fos_user_profile_show');
+            return $this->redirectToRoute('nucleos_profile_profile_show');
         }
 
         return $this->render('profile/edit_profile.html.twig', array(
@@ -161,7 +161,7 @@ class ProfileController extends AbstractController
             ->getSingleScalarResult();
 
         $pages  = ceil($count / self::ITEMS_PER_PAGE);
-        $page   = $request->query->get('p', 1);
+        $page   = $request->query->getInt('p', 1);
         $offset = self::ITEMS_PER_PAGE * ($page - 1);
 
         $orders = (clone $qb)
@@ -185,11 +185,13 @@ class ProfileController extends AbstractController
     {
         $order = $this->orderRepository->find($id);
 
-        if ($order->getCustomer()->hasUser() && $order->getCustomer()->getUser() !== $this->getUser()) {
+        $customer = $order->getCustomer();
+
+        if ($customer->hasUser() && $customer->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException();
         }
 
-        if ($order->isFoodtech()) {
+        if ($order->hasVendor()) {
 
             // FIXME We may generate expired tokens
 
@@ -393,15 +395,15 @@ class ProfileController extends AbstractController
     /**
      * @Route("/profile/notifications", name="profile_notifications")
      */
-    public function notificationsAction(Request $request, SocketIoManager $socketIoManager, NormalizerInterface $normalizer)
+    public function notificationsAction(Request $request, TopBarNotifications $topBarNotifications, NormalizerInterface $normalizer)
     {
-        $notifications = $socketIoManager->getLastNotifications($this->getUser());
+        $notifications = $topBarNotifications->getLastNotifications($this->getUser());
 
         if ($request->query->has('format') && 'json' === $request->query->get('format')) {
 
             return new JsonResponse([
                 'notifications' => $normalizer->normalize($notifications, 'json'),
-                'unread' => (int) $socketIoManager->countNotifications($this->getUser())
+                'unread' => (int) $topBarNotifications->countNotifications($this->getUser())
             ]);
         }
 
@@ -413,7 +415,7 @@ class ProfileController extends AbstractController
     /**
      * @Route("/profile/notifications/read", methods={"POST"}, name="profile_notifications_mark_as_read")
      */
-    public function markNotificationsAsReadAction(Request $request, SocketIoManager $socketIoManager)
+    public function markNotificationsAsReadAction(Request $request, TopBarNotifications $topBarNotifications)
     {
         $ids = [];
         $content = $request->getContent();
@@ -421,7 +423,7 @@ class ProfileController extends AbstractController
             $ids = json_decode($content, true);
         }
 
-        $socketIoManager->markAsRead($this->getUser(), $ids);
+        $topBarNotifications->markAsRead($this->getUser(), $ids);
 
         return new Response('', 204);
     }

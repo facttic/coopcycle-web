@@ -39,9 +39,9 @@ export const socketIO = ({ dispatch, getState }) => {
     const protocol = window.location.protocol === 'https:' ? 'wss': 'ws'
 
     centrifuge = new Centrifuge(`${protocol}://${window.location.hostname}/centrifugo/connection/websocket`)
-    centrifuge.setToken(getState().centrifugoToken)
+    centrifuge.setToken(getState().config.centrifugoToken)
 
-    centrifuge.subscribe(getState().centrifugoEventsChannel, function(message) {
+    centrifuge.subscribe(getState().config.centrifugoEventsChannel, function(message) {
       const { event } = message.data
 
       switch (event.name) {
@@ -66,7 +66,7 @@ export const socketIO = ({ dispatch, getState }) => {
       }
     })
 
-    centrifuge.subscribe(getState().centrifugoTrackingChannel, function(message) {
+    centrifuge.subscribe(getState().config.centrifugoTrackingChannel, function(message) {
       pulse()
       dispatch(setGeolocation(message.data.user, message.data.coords, message.data.ts))
     })
@@ -86,7 +86,7 @@ export const socketIO = ({ dispatch, getState }) => {
 }
 
 function getKey(state) {
-  return state.dispatch.date.format('YYYY-MM-DD')
+  return state.logistics.date.format('YYYY-MM-DD')
 }
 
 export const persistFilters = ({ getState }) => (next) => (action) => {
@@ -96,7 +96,7 @@ export const persistFilters = ({ getState }) => (next) => (action) => {
   let state
   if (action.type === SET_FILTER_VALUE) {
     state = getState()
-    window.sessionStorage.setItem(`cpccl__dshbd__fltrs__${getKey(state)}`, JSON.stringify(state.filters))
+    window.sessionStorage.setItem(`cpccl__dshbd__fltrs__${getKey(state)}`, JSON.stringify(state.settings.filters))
   }
 
   if (action.type === RESET_FILTERS) {

@@ -2,7 +2,10 @@
 
 namespace AppBundle\Command;
 
+use AppBundle\Entity\Delivery;
+use AppBundle\Entity\Store;
 use Doctrine\DBAL\Connection;
+use Doctrine\ORM\EntityManagerInterface;
 use Psonic\Client;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputOption;
@@ -10,20 +13,28 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Twig\Environment as TwigEnvironment;
 
 Class BuildIndexCommand extends Command
 {
-    private $connection;
+    private $entityManager;
     private $ingestClient;
     private $controlClient;
     private $sonicSecretPassword;
     private $namespace;
 
-    public function __construct(Connection $connection, Client $ingestClient, Client $controlClient, string $sonicSecretPassword, string $namespace)
+    public function __construct(
+        EntityManagerInterface $entityManager,
+        Client $ingestClient,
+        Client $controlClient,
+        TwigEnvironment $twig,
+        string $sonicSecretPassword,
+        string $namespace)
     {
-        $this->connection = $connection;
+        $this->entityManager = $entityManager;
         $this->ingestClient = $ingestClient;
         $this->controlClient = $controlClient;
+        $this->twig = $twig;
         $this->sonicSecretPassword = $sonicSecretPassword;
         $this->namespace = $namespace;
 
@@ -50,16 +61,36 @@ Class BuildIndexCommand extends Command
         $ingest->connect($this->sonicSecretPassword);
         $control->connect($this->sonicSecretPassword);
 
-        $stmt = $this->connection->executeQuery('SELECT id, name FROM restaurant');
+        $allCollectionName = 'store:*:deliveries';
+        $deliveryRepo = $this->entityManager->getRepository(Delivery::class);
 
-        $this->io->text(sprintf('Indexing restaurants into collection "restaurants" of bucket "%s"', $this->namespace));
+        $q = $deliveryRepo->createQueryBuilder('d')
+            ->addOrderBy('d.id', 'DESC')
+            ->setMaxResults(10000)
+            ->getQuery();
 
-        while ($restaurant = $stmt->fetch()) {
-            $response = $ingest->push('restaurants', $this->namespace, $restaurant['id'], $restaurant['name']);
+        foreach ($q->toIterable() as $delivery) {
+
+            $html = $this->twig->render('sonic/delivery.html.twig', [
+                'delivery' => $delivery,
+            ]);
+
+            $response = $ingest->push($allCollectionName, $this->namespace, $delivery->getId(), $html);
             $status = $response->getStatus(); // Should be "OK"
-        }
 
-        $control->consolidate();
+            $this->io->text(sprintf('[%s] %s: %s', $allCollectionName, $delivery->getId(), $status));
+
+            $store = $delivery->getStore();
+
+            if ($store) {
+                $collectionName = sprintf('store:%d:deliveries', $store->getId());
+
+                $response = $ingest->push($collectionName, $this->namespace, $delivery->getId(), $html);
+                $status = $response->getStatus(); // Should be "OK"
+
+                $this->io->text(sprintf('[%s] %s: %s', $collectionName, $delivery->getId(), $status));
+            }
+        }
 
         $ingest->disconnect();
         $control->disconnect();

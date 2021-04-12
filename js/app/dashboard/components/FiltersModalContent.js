@@ -173,15 +173,23 @@ class FiltersModalContent extends React.Component {
 
 function mapStateToProps(state) {
 
+  const {
+    showFinishedTasks,
+    showCancelledTasks,
+    alwayShowUnassignedTasks,
+    hiddenCouriers,
+    timeRange,
+  } = state.settings.filters
+
   return {
-    tags: state.tags,
-    showFinishedTasks: state.filters.showFinishedTasks,
-    showCancelledTasks: state.filters.showCancelledTasks,
-    alwayShowUnassignedTasks: state.filters.alwayShowUnassignedTasks,
-    selectedTags: state.filters.tags,
+    tags: state.config.tags,
+    showFinishedTasks,
+    showCancelledTasks,
+    alwayShowUnassignedTasks,
+    selectedTags: state.settings.filters.tags,
     couriers: selectBookedUsernames(state),
-    hiddenCouriers: state.filters.hiddenCouriers,
-    timeRange: state.filters.timeRange,
+    hiddenCouriers,
+    timeRange,
   }
 }
 
