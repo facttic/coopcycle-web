@@ -3,7 +3,6 @@
 namespace AppBundle\Entity\Listener;
 
 use AppBundle\Entity\Delivery;
-use AppBundle\Service\TagManager;
 use Doctrine\Persistence\Event\LifecycleEventArgs;
 
 class DeliveryListener
@@ -19,7 +18,7 @@ class DeliveryListener
         $tags = $store->getTags();
 
         foreach ($delivery->getTasks() as $task) {
-            $task->setTags($tags);
+            $task->addTags($tags);
         }
     }
 }

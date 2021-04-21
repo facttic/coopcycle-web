@@ -468,6 +468,12 @@ admin_store_delivery_new:
             back: admin_deliveries
     methods:  [ GET, POST ]
 
+admin_store_delivery_download_images:
+    path: /admin/stores/{storeId}/deliveries/{deliveryId}/images/download
+    defaults:
+        _controller: AppBundle\Controller\AdminController::downloadDeliveryImagesAction
+    methods:  [ GET ]
+
 admin_store_users:
     path: /admin/stores/{id}/users
     defaults:
@@ -540,3 +546,10 @@ admin_customize:
         _controller: AppBundle\Controller\AdminController::customizeAction
         layout: 'admin.html.twig'
     methods:  [ GET, POST ]
+
+admin_metrics:
+    path: /admin/metrics
+    defaults:
+        _controller: AppBundle\Controller\AdminController::metricsAction
+        layout: 'admin.html.twig'
+    methods:  [ GET ]

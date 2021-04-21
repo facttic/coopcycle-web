@@ -116,7 +116,19 @@ const traverseNode = (node, accumulator) => {
       })
     } else {
 
-      if (node.nodes.left.attributes.name === 'diff_hours' || node.nodes.left.attributes.name === 'diff_days') {
+      if (node.nodes.left.nodes.node?.attributes.name === 'dropoff' && node.nodes.left.nodes.attribute?.attributes.value === 'doorstep') {
+        accumulator.push({
+          left:     `${node.nodes.left.nodes.node.attributes.name}.${node.nodes.left.nodes.attribute.attributes.value}`,
+          operator: node.attributes.operator,
+          right:    node.nodes.right.attributes.value,
+        })
+      } else if (node.nodes.left.nodes.node?.attributes.name === 'order' && node.nodes.left.nodes.attribute?.attributes.value === 'itemsTotal') {
+        accumulator.push({
+          left:     `${node.nodes.left.nodes.node.attributes.name}.${node.nodes.left.nodes.attribute.attributes.value}`,
+          operator: node.attributes.operator,
+          right:    node.nodes.right.attributes.value,
+        })
+      } else if (node.nodes.left.attributes.name === 'diff_hours' || node.nodes.left.attributes.name === 'diff_days') {
         accumulator.push({
           left:     `${node.nodes.left.attributes.name}(${node.nodes.left.nodes.arguments.nodes[0].attributes.name})`,
           operator: node.attributes.operator,
@@ -142,6 +154,35 @@ const traverseNode = (node, accumulator) => {
   }
 }
 
+export class Price {
+
+}
+
+export class FixedPrice extends Price {
+  constructor(value) {
+    super()
+    this.value = value
+  }
+}
+
+export class PriceRange extends Price {
+  constructor(attribute, price, step, threshold) {
+    super()
+    this.attribute = attribute
+    this.price = price
+    this.step = step
+    this.threshold = threshold
+  }
+}
+
+export class RawPriceExpression extends Price {
+  constructor(expression) {
+    super()
+    this.expression = expression
+  }
+}
+
+
 export const parseAST = ast => {
 
   const acc = []
@@ -150,3 +191,25 @@ export const parseAST = ast => {
 
   return acc
 }
+
+const parsePriceNode = (node, expression) => {
+  if (node.attributes.name === 'price_range') {
+
+    const args = node.nodes.arguments.nodes
+
+    const attribute = args[0].attributes.name
+    const price     = args[1].attributes.value
+    const step      = args[2].attributes.value
+    const threshold = args[3].attributes.value
+
+    return new PriceRange(attribute, price, step, threshold)
+  }
+
+  if (node.nodes.length === 0 && typeof node.attributes.value === 'number') {
+    return new FixedPrice(node.attributes.value)
+  }
+
+  return new RawPriceExpression(expression)
+}
+
+export const parsePriceAST = (ast, expression) => parsePriceNode(ast.nodes, expression)

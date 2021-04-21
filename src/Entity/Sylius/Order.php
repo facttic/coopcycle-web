@@ -24,6 +24,7 @@ use AppBundle\Entity\Address;
 use AppBundle\Entity\User;
 use AppBundle\Entity\Delivery;
 use AppBundle\Entity\LocalBusiness;
+use AppBundle\Entity\LocalBusiness\FulfillmentMethod;
 use AppBundle\Entity\Vendor;
 use AppBundle\Filter\OrderDateFilter;
 use AppBundle\Sylius\Order\AdjustmentInterface;
@@ -76,7 +77,11 @@ use Sylius\Component\Taxation\Model\TaxRateInterface;
  *         "responses"={
  *           "200"={
  *             "description"="Order timing information",
- *             "schema"=Order::SWAGGER_CONTEXT_TIMING_RESPONSE_SCHEMA
+ *             "content"={
+ *               "application/json": {
+ *                 "schema"=Order::SWAGGER_CONTEXT_TIMING_RESPONSE_SCHEMA
+ *               }
+ *             }
  *           }
  *         }
  *       }
@@ -175,6 +180,11 @@ use Sylius\Component\Taxation\Model\TaxRateInterface;
  *         "responses"={
  *           "200"={
  *             "description"="Order timing information",
+ *             "content"={
+ *               "application/json": {
+ *                 "schema"=Order::SWAGGER_CONTEXT_TIMING_RESPONSE_SCHEMA
+ *               }
+ *             }
  *           }
  *         }
  *       }
@@ -469,10 +479,22 @@ class Order extends BaseOrder implements OrderInterface
      */
     public function setRestaurant(?LocalBusiness $restaurant): void
     {
+        $currentRestaurant = $this->getRestaurant();
+
         $vendor = new Vendor();
         $vendor->setRestaurant($restaurant);
 
         $this->vendor = $vendor;
+
+        if (null !== $restaurant && $restaurant !== $currentRestaurant) {
+
+            $this->vendors->clear();
+
+            $this->clearItems();
+            $this->setShippingTimeRange(null);
+
+            $this->addRestaurant($restaurant);
+        }
     }
 
     public function hasVendor(): bool
@@ -938,6 +960,33 @@ class Order extends BaseOrder implements OrderInterface
         $this->setTakeaway($fulfillmentMethod === 'collection');
     }
 
+    public function getFulfillmentMethodObject(): ?FulfillmentMethod
+    {
+        $restaurants = $this->getRestaurants();
+
+        if (count($restaurants) === 0) {
+
+            // Vendors may not have been processed yet
+            $restaurant = $this->getRestaurant();
+
+            if (null !== $restaurant) {
+
+                return $restaurant->getFulfillmentMethod(
+                    $this->getFulfillmentMethod()
+                );
+            }
+
+            return null;
+        }
+
+        $first = $restaurants->first();
+        $target = count($restaurants) === 1 ? $first : $first->getHub();
+
+        return $target->getFulfillmentMethod(
+            $this->getFulfillmentMethod()
+        );
+    }
+
     public function getRefundTotal(): int
     {
         $refundTotal = 0;
@@ -1029,23 +1078,11 @@ class Order extends BaseOrder implements OrderInterface
         foreach ($this->getItems() as $item) {
 
             $product = $item->getVariant()->getProduct();
+            $restaurant = $product->getRestaurant();
 
-            if ($this->getVendor()->isHub()) {
-                $hub = $this->getVendor()->getHub();
-                $vendor = null;
-                foreach ($hub->getRestaurants() as $restaurant) {
-                    if ($restaurant->hasProduct($product)) {
-                        $vendor = $restaurant;
-                        break;
-                    }
-                }
-            } else {
-                $vendor = $this->getVendor()->getRestaurant();
-            }
-
-            if ($vendor) {
-                $items = isset($hash[$vendor]) ? $hash[$vendor] : [];
-                $hash[$vendor] = array_merge($items, [ $item ]);
+            if (null !== $restaurant) {
+                $items = isset($hash[$restaurant]) ? $hash[$restaurant] : [];
+                $hash[$restaurant] = array_merge($items, [ $item ]);
             }
         }
 
@@ -1150,7 +1187,7 @@ class Order extends BaseOrder implements OrderInterface
         return false;
     }
 
-    public function addRestaurant(LocalBusiness $restaurant, int $itemsTotal, int $transferAmount)
+    public function addRestaurant(LocalBusiness $restaurant, int $itemsTotal = 0, int $transferAmount = 0)
     {
         $vendor = $this->getVendorByRestaurant($restaurant);
 
@@ -1175,5 +1212,38 @@ class Order extends BaseOrder implements OrderInterface
         }
 
         return null;
+    }
+
+    public function getNotificationRecipients(): Collection
+    {
+        $recipients = new ArrayCollection();
+
+        foreach ($this->getRestaurants() as $restaurant) {
+            foreach ($restaurant->getOwners() as $owner) {
+                $recipients->add($owner);
+            }
+        }
+
+        return $recipients;
+    }
+
+    public function supportsGiropay(): bool
+    {
+        if ($this->isMultiVendor()) {
+
+            return false;
+        }
+
+        return $this->getRestaurant()->isStripePaymentMethodEnabled('giropay');
+    }
+
+    public function supportsEdenred(): bool
+    {
+        if ($this->isMultiVendor()) {
+
+            return false;
+        }
+
+        return null !== $this->getRestaurant()->getEdenredMerchantId();
     }
 }

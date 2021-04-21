@@ -27,10 +27,8 @@ function start() {
   const dashboardEl = document.getElementById('dashboard')
 
   let date = moment(dashboardEl.dataset.date)
-  let unassignedTasks = JSON.parse(dashboardEl.dataset.unassignedTasks)
+  let allTasks = JSON.parse(dashboardEl.dataset.allTasks)
   let taskLists = JSON.parse(dashboardEl.dataset.taskLists)
-
-  let assignedTasks = taskListUtils.assignedTasks(taskLists)
 
   // normalize data, keep only task ids, instead of the whole objects
   taskLists = taskLists.map(taskList => taskListUtils.replaceTasksWithIds(taskList))
@@ -48,7 +46,7 @@ function start() {
       entities: {
         tasks: taskAdapter.upsertMany(
           taskAdapter.getInitialState(),
-          unassignedTasks.concat(assignedTasks)
+          allTasks
         ),
         taskLists: taskListAdapter.upsertMany(
           taskListAdapter.getInitialState(),
@@ -72,7 +70,7 @@ function start() {
       exampleSpreadsheetUrl: dashboardEl.dataset.exampleSpreadsheetUrl,
       couriersList: JSON.parse(dashboardEl.dataset.couriersList),
       nav: dashboardEl.dataset.nav,
-      restaurants: JSON.parse(dashboardEl.dataset.restaurants),
+      pickupClusterAddresses: JSON.parse(dashboardEl.dataset.pickupClusterAddresses),
     },
     tracking: {
       positions,
@@ -84,7 +82,9 @@ function start() {
   if (persistedFilters) {
     preloadedState = {
       ...preloadedState,
-      filters: JSON.parse(persistedFilters)
+      settings: {
+        filters: JSON.parse(persistedFilters)
+      }
     }
   }
 
@@ -106,6 +106,16 @@ function start() {
                 <Navbar />
               </div>
               <div className="dashboard__map-container">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                  className="arrow-container"
+                  style={{ position: 'absolute', top: '0px', left: '0px', width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}
+                >
+                  <defs>
+                    <marker id="custom_arrow" markerWidth="4" markerHeight="4" refX="2" refY="2">
+                      <circle cx="2" cy="2" r="2" stroke="none" fill="#3498DB"/>
+                    </marker>
+                  </defs>
+                </svg>
                 <LeafletMap onLoad={ (e) => {
                   // It seems like a bad way to get a ref to the map,
                   // but we can't use the ref prop

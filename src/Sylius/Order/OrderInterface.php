@@ -6,6 +6,7 @@ use AppBundle\DataType\TsRange;
 use AppBundle\Entity\Address;
 use AppBundle\Entity\Delivery;
 use AppBundle\Entity\LocalBusiness;
+use AppBundle\Entity\LocalBusiness\FulfillmentMethod;
 use AppBundle\Entity\Sylius\OrderEvent;
 use AppBundle\Entity\Vendor;
 use Doctrine\Common\Collections\Collection;
@@ -24,7 +25,8 @@ interface OrderInterface extends
     ChannelAwareInterface,
     PromotionSubjectInterface,
     PromotionCouponAwarePromotionSubjectInterface,
-    CustomerAwareInterface
+    CustomerAwareInterface,
+    OrderSupportInterface
 {
     public const STATE_ACCEPTED = 'accepted';
     public const STATE_REFUSED = 'refused';
@@ -206,4 +208,6 @@ interface OrderInterface extends
      * @return Address|null
      */
     public function getPickupAddress(): ?Address;
+
+    public function getFulfillmentMethodObject(): ?FulfillmentMethod;
 }

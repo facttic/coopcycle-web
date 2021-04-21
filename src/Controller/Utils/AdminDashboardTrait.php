@@ -4,6 +4,8 @@ namespace AppBundle\Controller\Utils;
 
 use ApiPlatform\Core\Api\IriConverterInterface;
 use ApiPlatform\Core\Exception\InvalidArgumentException;
+use AppBundle\Entity\Address;
+use AppBundle\Entity\Hub;
 use AppBundle\Entity\LocalBusiness;
 use AppBundle\Entity\User;
 use AppBundle\Entity\RemotePushToken;
@@ -17,9 +19,11 @@ use AppBundle\Entity\Task\RecurrenceRule as TaskRecurrenceRule;
 use AppBundle\Form\TaskExportType;
 use AppBundle\Form\TaskGroupType;
 use AppBundle\Form\TaskUploadType;
+use AppBundle\Service\TagManager;
 use AppBundle\Service\TaskManager;
 use AppBundle\Utils\TaskImageNamer;
 use Cocur\Slugify\SlugifyInterface;
+use Doctrine\ORM\Query\Expr;
 use Nucleos\UserBundle\Model\UserInterface;
 use Nucleos\UserBundle\Model\UserManagerInterface;
 use Hashids\Hashids;
@@ -63,10 +67,12 @@ trait AdminDashboardTrait
         TaskManager $taskManager,
         JWTManagerInterface $jwtManager,
         CentrifugoClient $centrifugoClient,
-        Redis $tile38)
+        Redis $tile38,
+        IriConverterInterface $iriConverter,
+        TagManager $tagManager)
     {
         return $this->dashboardFullscreenAction((new \DateTime())->format('Y-m-d'),
-            $request, $taskManager, $jwtManager, $centrifugoClient, $tile38);
+            $request, $taskManager, $jwtManager, $centrifugoClient, $tile38, $iriConverter, $tagManager);
     }
 
     /**
@@ -77,7 +83,9 @@ trait AdminDashboardTrait
         TaskManager $taskManager,
         JWTManagerInterface $jwtManager,
         CentrifugoClient $centrifugoClient,
-        Redis $tile38)
+        Redis $tile38,
+        IriConverterInterface $iriConverter,
+        TagManager $tagManager)
     {
         $hashids = new Hashids($this->getParameter('secret'), 8);
 
@@ -108,56 +116,42 @@ trait AdminDashboardTrait
             return $response;
         }
 
-        $unassignedTasks = $this->getDoctrine()
+        $allTasks = $this->getDoctrine()
             ->getRepository(Task::class)
-            ->findUnassignedByDate($date);
+            ->findByDate($date)
+            ;
 
         $taskLists = $this->getDoctrine()
             ->getRepository(TaskList::class)
             ->findByDate($date);
 
-        $unassignedTasksNormalized = array_map(function (Task $task) {
+        $allTasksNormalized = array_map(function (Task $task) {
             return $this->get('serializer')->normalize($task, 'jsonld', [
                 'resource_class' => Task::class,
                 'operation_type' => 'item',
                 'item_operation_name' => 'get',
                 'groups' => ['task', 'delivery', 'address', sprintf('address_%s', $this->getParameter('country_iso'))]
             ]);
-        }, $unassignedTasks);
+        }, $allTasks);
 
         $taskListsNormalized = array_map(function (TaskList $taskList) {
             return $this->get('serializer')->normalize($taskList, 'jsonld', [
                 'resource_class' => TaskList::class,
                 'operation_type' => 'item',
                 'item_operation_name' => 'get',
-                'groups' => ['task_collection', 'task', 'delivery', 'address', sprintf('address_%s', $this->getParameter('country_iso'))]
+                'groups' => ['task_collection']
             ]);
         }, $taskLists);
 
         $couriers = $this->getDoctrine()
             ->getRepository(User::class)
             ->createQueryBuilder('u')
-            ->select("u.username")
+            ->select('u.username')
             ->where('u.roles LIKE :roles')
             ->orderBy('u.username', 'ASC')
             ->setParameter('roles', '%ROLE_COURIER%')
             ->getQuery()
-            ->getResult();
-
-        $allTags = $this->getDoctrine()
-            ->getRepository(Tag::class)
-            ->findAll();
-
-        $normalizedTags = [];
-        foreach ($allTags as $tag) {
-            $normalizedTags[] = [
-                'name' => $tag->getName(),
-                'slug' => $tag->getSlug(),
-                'color' => $tag->getColor(),
-            ];
-        }
-
-        $positions = $this->loadPositions($tile38);
+            ->getArrayResult();
 
         $this->getDoctrine()->getManager()->getFilters()->enable('soft_deleteable');
 
@@ -184,33 +178,41 @@ trait AdminDashboardTrait
             ]);
         }, $stores);
 
-        $restaurants = $this->getDoctrine()->getRepository(LocalBusiness::class)->findBy([], ['name' => 'ASC']);
+        $qb = $this->getDoctrine()
+            ->getRepository(Address::class)
+            ->createQueryBuilder('a');
+        $qb
+            ->select('a.id')
+            ->leftJoin(LocalBusiness::class, 'r', Expr\Join::WITH, 'r.address = a.id')
+            ->leftJoin(Hub::class,           'h', Expr\Join::WITH, 'h.address = a.id')
+            ->andWhere(
+                $qb->expr()->orX(
+                    $qb->expr()->isNotNull('r.id'),
+                    $qb->expr()->isNotNull('h.id')
+                )
+            );
 
-        $restaurantsNormalized = array_map(function (LocalBusiness $restaurant) {
-            return $this->get('serializer')->normalize($restaurant, 'jsonld', [
-                'resource_class' => LocalBusiness::class,
-                'operation_type' => 'item',
-                'item_operation_name' => 'get',
-                'groups' => ['restaurant_simple']
-            ]);
-        }, $restaurants);
+        $addressIris = array_map(
+            fn ($address) => $iriConverter->getItemIriFromResourceClass(Address::class, $address),
+            $qb->getQuery()->getArrayResult()
+        );
 
         return $this->render('admin/dashboard_iframe.html.twig', [
             'nav' => $request->query->getBoolean('nav', true),
             'date' => $date,
             'couriers' => $couriers,
-            'unassigned_tasks' => $unassignedTasksNormalized,
+            'all_tasks' => $allTasksNormalized,
             'task_lists' => $taskListsNormalized,
             'task_export_form' => $taskExportForm->createView(),
-            'tags' => $normalizedTags,
+            'tags' => $tagManager->getAllTags(),
             'jwt' => $jwtManager->create($this->getUser()),
             'centrifugo_token' => $centrifugoClient->generateConnectionToken($this->getUser()->getUsername(), (time() + 3600)),
             'centrifugo_tracking_channel' => sprintf('$%s_tracking', $this->getParameter('centrifugo_namespace')),
             'centrifugo_events_channel' => sprintf('%s_events#%s', $this->getParameter('centrifugo_namespace'), $this->getUser()->getUsername()),
-            'positions' => $positions,
+            'positions' => $this->loadPositions($tile38),
             'task_recurrence_rules' => $recurrenceRulesNormalized,
             'stores' => $storesNormalized,
-            'restaurants' => $restaurantsNormalized,
+            'pickup_cluster_addresses' => $addressIris,
         ]);
     }
 
@@ -329,7 +331,7 @@ trait AdminDashboardTrait
             'resource_class' => TaskList::class,
             'operation_type' => 'item',
             'item_operation_name' => 'get',
-            'groups' => ['task_collection', 'task', 'delivery', 'address']
+            'groups' => ['task_collection']
         ]));
     }
 
@@ -358,7 +360,7 @@ trait AdminDashboardTrait
             'resource_class' => TaskList::class,
             'operation_type' => 'item',
             'item_operation_name' => 'get',
-            'groups' => ['task_collection', 'task']
+            'groups' => ['task_collection']
         ]);
 
         return new JsonResponse($taskListNormalized);

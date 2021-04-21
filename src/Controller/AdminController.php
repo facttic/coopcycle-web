@@ -26,11 +26,11 @@ use AppBundle\Entity\Restaurant\Pledge;
 use AppBundle\Entity\Store;
 use AppBundle\Entity\Sylius\Customer;
 use AppBundle\Entity\Sylius\Order;
+use AppBundle\Entity\Sylius\OrderVendor;
 use AppBundle\Entity\Sylius\OrderRepository;
 use AppBundle\Entity\Tag;
 use AppBundle\Entity\Task;
 use AppBundle\Entity\TimeSlot;
-use AppBundle\Entity\Vendor;
 use AppBundle\Entity\Zone;
 use AppBundle\Form\AddOrganizationType;
 use AppBundle\Form\AttachToOrganizationType;
@@ -684,7 +684,7 @@ class AdminController extends AbstractController
         // Allow filtering by store & restaurant with KnpPaginator
         $qb->leftJoin(Store::class, 's', Expr\Join::WITH, 's.id = d.store');
         $qb->leftJoin(Order::class, 'o', Expr\Join::WITH, 'o.id = d.order');
-        $qb->leftJoin(Vendor::class, 'v', Expr\Join::WITH, 'o.vendor = v.id');
+        $qb->leftJoin(OrderVendor::class, 'v', Expr\Join::WITH, 'o.id = v.order');
         $qb->leftJoin(LocalBusiness::class, 'r', Expr\Join::WITH, 'v.restaurant = r.id');
 
         $deliveries = $paginator->paginate(
@@ -719,7 +719,8 @@ class AdminController extends AbstractController
             'deliver'   => 'admin_delivery_deliver',
             'view'      => 'admin_delivery',
             'store_new' => 'admin_store_delivery_new',
-            'store_addresses' => 'admin_store_addresses'
+            'store_addresses' => 'admin_store_addresses',
+            'download_images' => 'admin_store_delivery_download_images',
         ];
     }
 
@@ -829,22 +830,14 @@ class AdminController extends AbstractController
             return  $this->redirectToRoute('admin_tags');
         }
 
-        $tags = $this->getDoctrine()->getRepository(Tag::class)->findAll();
-
         if ($request->query->has('format')) {
             if ('json' === $request->query->get('format')) {
-                $data = array_map(function (Tag $tag) {
-                    return [
-                        'id' => $tag->getId(),
-                        'name' => $tag->getName(),
-                        'slug' => $tag->getSlug(),
-                        'color' => $tag->getColor(),
-                    ];
-                }, $tags);
 
-                return new JsonResponse($data);
+                return new JsonResponse($tagManager->getAllTags());
             }
         }
+
+        $tags = $this->getDoctrine()->getRepository(Tag::class)->findAll();
 
         return $this->render('admin/tags.html.twig', [
             'tags' => $tags
@@ -910,7 +903,12 @@ class AdminController extends AbstractController
 
             $em->flush();
 
-            return $this->redirectToRoute('admin_deliveries_pricing');
+            $this->addFlash(
+                'notice',
+                $this->translator->trans('global.changesSaved')
+            );
+
+            return $this->redirectToRoute('admin_deliveries_pricing_ruleset', ['id' => $ruleSet->getId()]);
         }
 
         return $this->render('admin/pricing_rule_set.html.twig', [
@@ -2078,6 +2076,28 @@ class AdminController extends AbstractController
             'products_route' => $routes['products'],
             'pledge_count' => $pledgeCount,
             'pledge_form' => $pledgeForm->createView(),
+        ]);
+    }
+
+    public function metricsAction(Request $request)
+    {
+        // https://cube.dev/docs/security
+        $key = \Lcobucci\JWT\Signer\Key\InMemory::plainText($_SERVER['CUBEJS_API_SECRET']);
+        $config = \Lcobucci\JWT\Configuration::forSymmetricSigner(
+            new \Lcobucci\JWT\Signer\Hmac\Sha256(),
+            $key
+        );
+
+        // https://github.com/lcobucci/jwt/issues/229
+        $now = new \DateTimeImmutable('@' . time());
+
+        $token = $config->builder()
+                ->expiresAt($now->modify('+1 hour'))
+                ->withClaim('database', $this->getParameter('database_name'))
+                ->getToken($config->signer(), $config->signingKey());
+
+        return $this->render('admin/metrics.html.twig', [
+            'cube_token' => $token->toString(),
         ]);
     }
 }

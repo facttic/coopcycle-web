@@ -136,7 +136,7 @@ class RestaurantController extends AbstractController
         return $business->getContext() === Store::class ? 'store' : 'restaurant';
     }
 
-     /**
+    /**
      * @Route("/restaurants/cuisines/{cuisineName}", name="restaurants_by_cuisine")
      */
     public function listByCuisineAction($cuisineName, Request $request,
@@ -745,5 +745,25 @@ class RestaurantController extends AbstractController
     public function storeListAction(Request $request, LocalBusinessRepository $repository, CacheInterface $projectCache)
     {
         return $this->listAction($request, $repository->withContext(Store::class), $projectCache);
+    }
+
+    /**
+     * @Route("/restaurants/tags/{tags}", name="restaurants_by_tags")
+     */
+    public function listByTagsAction($tags, Request $request,
+        LocalBusinessRepository $repository)
+    {
+        $restaurants = $repository->findZeroWaste();
+
+        return $this->render('restaurant/list_by_tags.html.twig', array(
+            'count' => count($restaurants),
+            'restaurants' => $restaurants,
+            'page' => 1,
+            'pages' => 1,
+            'geohash' => '',
+            'addresses_normalized' => $this->getUserAddresses(),
+            'address' => null,
+            'local_business_context' => $repository->getContext(),
+        ));
     }
 }

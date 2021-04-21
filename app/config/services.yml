@@ -348,6 +348,13 @@ services:
         label: 'Is restaurant'
         form_type: AppBundle\Form\Sylius\Promotion\Rule\IsRestaurantConfigurationType
 
+  AppBundle\Sylius\Promotion\Checker\Rule\IsItemsTotalAboveRuleChecker:
+    tags:
+      - name: sylius.promotion_rule_checker
+        type: is_items_total_above
+        label: 'Is items total above'
+        form_type: AppBundle\Form\Sylius\Promotion\Rule\IsItemsTotalAboveConfigurationType
+
   coopcycle.sylius.factory.product_variant:
     class: AppBundle\Sylius\Product\ProductVariantFactory
     decorates: sylius.factory.product_variant
@@ -427,6 +434,7 @@ services:
     arguments: [ '@coopcycle.tag_manager' ]
     tags:
       - { name: doctrine.event_subscriber, connection: default }
+      - { name: monolog.logger, channel: coopcycle.tagging }
 
   AppBundle\Service\DeliveryManager:
     arguments:
@@ -551,6 +559,7 @@ services:
   AppBundle\Service\SettingsManager:
     arguments:
       $craueConfig: "@craue_config"
+      $craueCache: "@craue_config_cache_adapter"
       $configEntityName: "%craue_config.entity_name%"
       $country: "%country_iso%"
       $foodtechEnabled: "%foodtech_enabled%"
@@ -887,6 +896,8 @@ services:
   AppBundle\Service\TagManager:
     arguments:
       $cache: '@tag_manager.cache'
+    tags:
+      - { name: monolog.logger, channel: coopcycle.tagging }
 
   AppBundle\Log\RequestResponseProcessor:
     tags:
@@ -1120,3 +1131,8 @@ services:
       $tile38: '@snc_redis.tile38'
       $doorstepChanNamespace: '%tile38_doorstep_chan_namespace%'
       $fleetKey: '%tile38_fleet_key%'
+
+  AppBundle\Sylius\Taxation\TaxesHelper:
+    arguments:
+      $country: '%region_iso%'
+      # $legacyTaxes: '%env(bool:COOPCYCLE_LEGACY_TAXES)%'

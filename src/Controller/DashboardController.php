@@ -9,6 +9,7 @@ use AppBundle\Controller\Utils\RestaurantTrait;
 use AppBundle\Controller\Utils\StoreTrait;
 use AppBundle\Entity\LocalBusiness;
 use AppBundle\Sylius\Order\OrderFactory;
+use AppBundle\Sylius\Taxation\TaxesHelper;
 use Cocur\Slugify\SlugifyInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
@@ -58,7 +59,8 @@ class DashboardController extends AbstractController
             'deliver'   => 'profile_delivery_deliver',
             'view'      => 'dashboard_delivery',
             'store_new' => 'dashboard_store_delivery_new',
-            'store_addresses' => 'dashboard_store_addresses'
+            'store_addresses' => 'dashboard_store_addresses',
+            'download_images' => 'dashboard_store_delivery_download_images',
         ];
     }
 
@@ -76,7 +78,8 @@ class DashboardController extends AbstractController
         SlugifyInterface $slugify,
         TranslatorInterface $translator,
         PaginatorInterface $paginator,
-        EntityManagerInterface $entityManager)
+        EntityManagerInterface $entityManager,
+        TaxesHelper $taxesHelper)
     {
         $user = $this->getUser();
 
@@ -99,7 +102,7 @@ class DashboardController extends AbstractController
 
             $restaurant = $request->attributes->get('_restaurant');
 
-            return $this->statsAction($restaurant->getId(), $request, $slugify, $translator, $entityManager, $paginator);
+            return $this->statsAction($restaurant->getId(), $request, $slugify, $translator, $entityManager, $paginator, $taxesHelper);
         }
 
         return $this->redirectToRoute('nucleos_profile_profile_show');

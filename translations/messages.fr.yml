@@ -1160,3 +1160,14 @@ adminDashboard.api.help: Créez des livraisons de facon automatisée
 checkout.suggestions.continue_shopping_hub: Vous pouvez continuer votre commande dans les autres boutiques <strong>%name%</strong>
 hub.disclaimer: Commandez dans plusieurs boutiques, et on vous livre en une seule fois !
 form.adress_book.remember_address: Se souvenir de cette adresse
+restaurant.list.tags.zerowaste: Zéro déchet
+homepage.zerowaste: Découvrez nos restaurants zéro déchet !
+restaurant.stats.view_simple: Affichage simple
+restaurant.stats.view_detailed: Affichage détaillé
+form.items_total_promotion.items_total.label: À partir de
+form.items_total_promotion.fixed_discount_amount.label: Appliquer une réduction de
+restaurant_promotion.items_total.help: Cela vous permet d'appliquer une réduction à partir d'un montant d'achat.
+  Votre marge sera réduite du montant de la réduction.
+  Cela ne <strong>diminuera pas</strong> les frais perçus par
+  la plate-forme.
+restaurant_promotion.items_total: À partir d'un montant d'achats
