@@ -66,15 +66,17 @@ final class OrderPaymentProcessor implements OrderProcessorInterface
             return;
         }
 
-        // FIXME
-        // Do not hardcode this here
-        $card = $this->paymentMethodRepository->findOneByCode('CARD');
+        $paymentMethod = $this->paymentMethodRepository->findOneByCode(
+            strtoupper(
+                $this->resolver->resolve()
+            )
+        );
 
         $payment = $this->paymentFactory->createWithAmountAndCurrencyCode(
             $order->getTotal(),
             $this->currencyContext->getCurrencyCode()
         );
-        $payment->setMethod($card);
+        $payment->setMethod($paymentMethod);
         $payment->setState($targetState);
 
         $order->addPayment($payment);

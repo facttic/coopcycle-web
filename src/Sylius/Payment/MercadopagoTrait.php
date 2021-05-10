@@ -1,5 +1,4 @@
 <?php
-
 namespace AppBundle\Sylius\Payment;
 
 trait MercadopagoTrait
@@ -25,12 +24,28 @@ trait MercadopagoTrait
             'mercadopago_installments' => $installments
         ]);
     }
-
     public function getMercadopagoInstallments()
     {
         if (isset($this->details['mercadopago_installments'])) {
-
             return $this->details['mercadopago_installments'];
+        }
+    }
+
+    public function setMercadopagoPreference($preference)
+    {
+        $this->details = array_merge($this->details, [
+            'mercadopago_preference_id' => $preference['mercadopago_payment_id'],
+            'mercadopago_payment_id'    => $preference['mercadopago_payment_id']
+        ]);
+    }
+
+    public function getMercadopagoPreference()
+    {
+        if (isset($this->details['mercadopago_preference_id'])) {
+            return [
+                'mercadopago_preference_id' => $this->details['mercadopago_preference_id'],
+                'mercadopago_payment_id'    => $this->details['mercadopago_payment_id']
+            ];
         }
     }
 }
