@@ -6,6 +6,8 @@ use AppBundle\Edenred\Authentication as EdenredAuthentication;
 use AppBundle\Edenred\Client as EdenredPayment;
 use AppBundle\Form\StripePaymentType;
 use AppBundle\Payment\GatewayResolver;
+use AppBundle\Service\MercadopagoManager;
+use MercadoPago;
 use AppBundle\Sylius\Customer\CustomerInterface;
 use AppBundle\Sylius\Payment\Context as PaymentContext;
 use AppBundle\Utils\OrderTimeHelper;
@@ -21,14 +23,17 @@ use Webmozart\Assert\Assert;
 class CheckoutPaymentType extends AbstractType
 {
     private $resolver;
+    private $mercadopagoManager;
 
     public function __construct(
         GatewayResolver $resolver,
+        MercadopagoManager $mercadopagoManager,
         OrderTimeHelper $orderTimeHelper,
         EdenredAuthentication $edenredAuthentication,
         EdenredPayment $edenredPayment)
     {
         $this->resolver = $resolver;
+        $this->mercadopagoManager = $mercadopagoManager;
         $this->edenredAuthentication = $edenredAuthentication;
         $this->edenredPayment = $edenredPayment;
 
@@ -53,6 +58,18 @@ class CheckoutPaymentType extends AbstractType
                 ->add('installments', HiddenType::class, [
                     'mapped' => false,
                 ]);
+
+            $this->mercadopagoManager->configure();
+
+            // For most countries, the customer has to provide
+            // @see https://www.mercadopago.com.br/developers/en/guides/localization/identification-types/
+            // @see https://www.mercadopago.com.br/developers/en/reference/identification_types/_identification_types/get/
+            $identificationTypesResponse = MercadoPago\SDK::get('/v1/identification_types');
+
+            // This will return 404 for Mexico
+            if ($identificationTypesResponse !== 404) {
+                // TODO Implement identification types for other countries
+            }
         }
 
         $builder->addEventListener(FormEvents::POST_SET_DATA, function (FormEvent $event) {
